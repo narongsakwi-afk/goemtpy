@@ -2,111 +2,13 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <title>เกมหมากล้อม (Go) - ระบบออนไลน์</title>
+    <title>เกมหมากล้อม (Go) - ระบบออนไลน์ v2.1</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --board-size: 15; --cell-size: 28px; --color-light-bg: #f9f9f9;
-            --color-dark-bg: #e0e0e0; --color-board: #f7d794; --color-wood-dark: #b8860b;
-            --color-button: #4a90e2; --color-button-hover: #357ABD; --color-black: #000000;
-            --color-white: #ffffff; --font-family: 'Kanit', sans-serif; --bg-color: var(--color-dark-bg);
-        }
-        body {
-            font-family: var(--font-family); display: flex; flex-direction: column; align-items: center;
-            padding: 10px; margin: 0; background-color: var(--bg-color);
-            transition: background-color 0.4s ease; min-height: 100vh; color: #333;
-        }
-        body.white-turn { --bg-color: var(--color-light-bg); } body.black-turn { --bg-color: var(--color-dark-bg); }
-        h1, h2, h3 { font-weight: 600; color: #1e3a5f; margin-bottom: 15px; }
-        #home-view, #lobby-view, #game-view, #waiting-room-view {
-            display: none; width: 100%; max-width: 1200px;
-            align-items: center; flex-direction: column; padding: 15px;
-        }
-        #home-view.active, #lobby-view.active, #game-view.active, #waiting-room-view.active { display: flex; }
-        .card {
-            background-color: var(--color-white); border-radius: 12px;
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15); padding: 25px;
-            margin-bottom: 20px; width: 100%; box-sizing: border-box;
-        }
-        #home-view input, #create-room-section input {
-            padding: 10px; margin: 5px 0 15px 10px; border: 1px solid #ccc;
-            border-radius: 6px; font-size: 16px; width: 60%;
-        }
-        button {
-            padding: 12px 25px; font-size: 18px; margin: 10px 8px; cursor: pointer;
-            border: none; border-radius: 8px; font-weight: 600;
-            transition: background-color 0.3s, transform 0.1s;
-        }
-        button:disabled { background-color: #ccc; cursor: not-allowed; }
-        .btn-primary { background-color: var(--color-button); color: var(--color-white); }
-        .btn-primary:hover:not(:disabled) { background-color: var(--color-button-hover); transform: translateY(-1px); }
-        .btn-secondary { background-color: #e7e7e7; color: #333; }
-        .btn-secondary:hover { background-color: #d7d7d7; }
-        .btn-join { background-color: #28a745; color: white; padding: 8px 15px; font-size: 16px; }
-        .btn-join:hover:not(:disabled) { background-color: #218838; }
-
-        #online-players-section { text-align: left; }
-        #online-list { list-style-type: none; padding-left: 0; }
-        #online-list li { padding: 5px 0; border-bottom: 1px solid #f0f0f0; color: #2e7d32; font-weight: 500; }
-        #online-list li::before { content: '🟢 '; }
-
-        #room-list { display: flex; flex-direction: column; gap: 15px; margin-top: 10px; }
-        .room-item {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 15px; background-color: #f9f9f9; border-radius: 8px; border: 1px solid #eee;
-        }
-
-        .player-slots { display: flex; justify-content: space-around; width: 100%; margin: 20px 0; }
-        .player-slot { width: 45%; padding: 20px; border: 1px solid #ddd; border-radius: 8px; text-align: center; }
-        .status-indicator { display: inline-block; padding: 5px 12px; border-radius: 15px; font-size: 0.9em; font-weight: 600; }
-        .status-indicator.host { background-color: #e2eafc; color: #4a69bd; }
-        .status-indicator.waiting { background-color: #f8d7da; color: #721c24; }
-        .status-indicator.ready { background-color: #d4edda; color: #155724; }
-
-        .turn-indicator { display: inline-block; margin-right: 8px; font-weight: bold; color: #f39c12; visibility: hidden; }
-        .turn-indicator.active { visibility: visible; }
-
-        #leaderboard table { width: 100%; border-collapse: separate; border-spacing: 0; }
-        #leaderboard th, #leaderboard td { padding: 12px 15px; text-align: left; }
-        #leaderboard th { background-color: #1e3a5f; color: var(--color-white); }
-        
-        #game-view { flex-direction: row; align-items: flex-start; position: relative; }
-
-        #player-info-container { width: 220px; flex-shrink: 0; margin-right: 20px; }
-        .player-info-card {
-            background: #fff; padding: 15px; border-radius: 8px;
-            margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-        .player-info-card h4 { margin: 0 0 10px 0; border-bottom: 1px solid #eee; padding-bottom: 8px; }
-        .player-info-card p { margin: 4px 0; font-size: 0.95em; }
-        .player-info-rank { font-weight: bold; }
-
-        #game-container { flex-shrink: 0; text-align: center; }
-        #controls-panel { min-width: 250px; text-align: center; }
-
-        #board {
-            display: grid; grid-template-columns: repeat(var(--board-size), 1fr);
-            width: calc(var(--board-size) * var(--cell-size)); height: calc(var(--board-size) * var(--cell-size));
-            background-color: var(--color-board); border: 4px solid var(--color-wood-dark);
-        }
-        .intersection {
-            border-right: 1px solid #333; border-bottom: 1px solid #333; cursor: pointer;
-            box-sizing: border-box; display: flex; justify-content: center; align-items: center; position: relative;
-        }
-        .intersection:nth-child(15n) { border-right: none; }
-        #board > div:nth-last-child(-n+15) { border-bottom: none; }
-        .stone {
-            width: 80%; height: 80%; border-radius: 50%; position: absolute;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.4), inset 0 0 5px rgba(255, 255, 255, 0.4);
-        }
-        .black { background: radial-gradient(circle at 30% 30%, #444, var(--color-black)); }
-        .white {
-            background: radial-gradient(circle at 30% 30%, var(--color-white), #ddd); border: 1px solid #aaa;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.4), inset 0 0 5px rgba(0, 0, 0, 0.2);
-        }
+        :root{--board-size:15;--cell-size:28px;--color-light-bg:#f9f9f9;--color-dark-bg:#e0e0e0;--color-board:#f7d794;--color-wood-dark:#b8860b;--color-button:#4a90e2;--color-button-hover:#357ABD;--color-black:#000;--color-white:#fff;--font-family:'Kanit',sans-serif;--bg-color:var(--color-dark-bg)}body{font-family:var(--font-family);display:flex;flex-direction:column;align-items:center;padding:10px;margin:0;background-color:var(--bg-color);transition:background-color .4s ease;min-height:100vh;color:#333}body.white-turn{--bg-color:var(--color-light-bg)}body.black-turn{--bg-color:var(--color-dark-bg)}h1,h2,h3{font-weight:600;color:#1e3a5f;margin-bottom:15px}#home-view,#lobby-view,#game-view,#waiting-room-view{display:none;width:100%;max-width:1200px;align-items:center;flex-direction:column;padding:15px}#home-view.active,#lobby-view.active,#game-view.active,#waiting-room-view.active{display:flex}.card{background-color:var(--color-white);border-radius:12px;box-shadow:0 8px 16px rgba(0,0,0,.15);padding:25px;margin-bottom:20px;width:100%;box-sizing:border-box}#home-view input,#create-room-section input{padding:10px;margin:5px 0 15px 10px;border:1px solid #ccc;border-radius:6px;font-size:16px;width:60%}button{padding:12px 25px;font-size:18px;margin:10px 8px;cursor:pointer;border:none;border-radius:8px;font-weight:600;transition:background-color .3s,transform .1s}button:disabled{background-color:#ccc;cursor:not-allowed}.btn-primary{background-color:var(--color-button);color:var(--color-white)}.btn-primary:hover:not(:disabled){background-color:var(--color-button-hover);transform:translateY(-1px)}.btn-secondary{background-color:#e7e7e7;color:#333}.btn-secondary:hover{background-color:#d7d7d7}.btn-join{background-color:#28a745;color:#fff;padding:8px 15px;font-size:16px}.btn-join:hover:not(:disabled){background-color:#218838}#online-players-section{text-align:left}#online-list{list-style-type:none;padding-left:0}#online-list li{padding:5px 0;border-bottom:1px solid #f0f0f0;color:#2e7d32;font-weight:500}#online-list li::before{content:'🟢 '}#room-list{display:flex;flex-direction:column;gap:15px;margin-top:10px}.room-item{display:flex;justify-content:space-between;align-items:center;padding:15px;background-color:#f9f9f9;border-radius:8px;border:1px solid #eee}.player-slots{display:flex;justify-content:space-around;width:100%;margin:20px 0}.player-slot{width:45%;padding:20px;border:1px solid #ddd;border-radius:8px;text-align:center}.status-indicator{display:inline-block;padding:5px 12px;border-radius:15px;font-size:.9em;font-weight:600}.status-indicator.host{background-color:#e2eafc;color:#4a69bd}.status-indicator.waiting{background-color:#f8d7da;color:#721c24}.status-indicator.ready{background-color:#d4edda;color:#155724}.turn-indicator{display:inline-block;margin-right:8px;font-weight:700;color:#f39c12;visibility:hidden}.turn-indicator.active{visibility:visible}#leaderboard table{width:100%;border-collapse:separate;border-spacing:0}#leaderboard th,#leaderboard td{padding:12px 15px;text-align:left}#leaderboard th{background-color:#1e3a5f;color:var(--color-white)}#game-view{flex-direction:row;align-items:flex-start;position:relative}#player-info-container{width:220px;flex-shrink:0;margin-right:20px}.player-info-card{background:#fff;padding:15px;border-radius:8px;margin-bottom:15px;box-shadow:0 2px 4px rgba(0,0,0,.05)}.player-info-card h4{margin:0 0 10px;border-bottom:1px solid #eee;padding-bottom:8px}.player-info-card p{margin:4px 0;font-size:.95em}.player-info-rank{font-weight:700}#game-container{flex-shrink:0;text-align:center}#controls-panel{min-width:250px;text-align:center}#board{display:grid;grid-template-columns:repeat(var(--board-size),1fr);width:calc(var(--board-size) * var(--cell-size));height:calc(var(--board-size) * var(--cell-size));background-color:var(--color-board);border:4px solid var(--color-wood-dark)}.intersection{border-right:1px solid #333;border-bottom:1px solid #333;cursor:pointer;box-sizing:border-box;display:flex;justify-content:center;align-items:center;position:relative}.intersection:nth-child(15n){border-right:none}#board>div:nth-last-child(-n+15){border-bottom:none}.stone{width:80%;height:80%;border-radius:50%;position:absolute;box-shadow:0 2px 4px rgba(0,0,0,.4),inset 0 0 5px rgba(255,255,255,.4)}.black{background:radial-gradient(circle at 30% 30%,#444,var(--color-black))}.white{background:radial-gradient(circle at 30% 30%,#fff,#ddd);border:1px solid #aaa;box-shadow:0 2px 4px rgba(0,0,0,.4),inset 0 0 5px rgba(0,0,0,.2)}
     </style>
 </head>
-<body class="black-turn">
+<body>
 
     <div id="home-view" class="card active">
         <h2>ยินดีต้อนรับสู่เกมหมากล้อม (Go)</h2>
@@ -135,480 +37,215 @@
             <h3>ห้องที่กำลังรอผู้เล่น ( <span id="room-count">0</span> )</h3>
             <div id="room-list"></div>
         </div>
-        <div id="leaderboard" class="card">
-             <h3>📈 Leaderboard</h3>
-             <table id="score-table">
-                <thead><tr><th>ระดับ</th><th>ผู้เล่น</th><th>คะแนน</th></tr></thead>
-                <tbody></tbody>
-            </table>
-        </div>
     </div>
 
     <div id="waiting-room-view" class="card">
         <h2>ห้องรอเล่น: <span id="waiting-room-name"></span></h2>
         <div class="player-slots">
-            <div class="player-slot" id="slot-p1">
+            <div class="player-slot">
                 <p><strong>⚪ ผู้เล่น 1 (หัวหน้าห้อง)</strong></p>
-                <p id="waiting-p1-name">[Player 1 Name]</p>
+                <p id="waiting-p1-name">...</p>
                 <span class="status-indicator host">หัวหน้าห้อง</span>
             </div>
-            <div class="player-slot" id="slot-p2">
+            <div class="player-slot">
                 <p><strong>⚫ ผู้เล่น 2 (ผู้ท้าชิง)</strong></p>
                 <p id="waiting-p2-name">...กำลังรอผู้เล่น...</p>
                 <span id="p2-status" class="status-indicator waiting">รอ</span>
             </div>
         </div>
         <div id="waiting-room-controls">
-            <div id="host-controls" style="display: none;">
-                 <button id="start-game-btn" class="btn-primary" onclick="attemptStartGame()" disabled>▶️ เริ่มเกม</button>
-            </div>
-            <div id="challenger-controls" style="display: none;">
-                <button id="ready-btn" class="btn-join" onclick="playerReady()">✅ พร้อม</button>
-            </div>
+             <button id="start-game-btn" class="btn-primary" style="display:none;">▶️ เริ่มเกม</button>
+             <button id="ready-btn" class="btn-join" style="display:none;">✅ พร้อม</button>
              <button onclick="leaveRoom()" class="btn-secondary">🏠 ออกจากห้อง</button>
         </div>
     </div>
 
     <div id="game-view">
-        <div id="player-info-container">
-            <div id="my-player-info" class="player-info-card">
-                <h4 id="my-info-name">My Name</h4>
-                <p id="my-info-rank" class="player-info-rank">Rank: Bronze</p>
-                <p id="my-info-score">Score: 0</p>
-            </div>
+        <div id="my-player-info" class="player-info-card">
+            <h4 id="my-info-name">My Name</h4>
         </div>
-
         <div id="game-container">
             <h1 id="game-title">กระดาน 15x15</h1>
             <div id="board"></div>
         </div>
         <div id="controls-panel">
             <div id="current-status" class="card">
-                <p>🧑 **ตาเดิน:** <span id="current-player"></span> (<span id="current-player-name"></span>)</p>
+                <p>🧑 **ตาเดิน:** <span id="current-player-name"></span></p>
                 <p>🏆 **หินที่จับได้:**</p>
                 <p><span id="p1-turn-indicator" class="turn-indicator">➢</span>⚫ <span id="p1-name-display"></span>: <span id="p1-score">0</span></p>
                 <p><span id="p2-turn-indicator" class="turn-indicator">➢</span>⚪ <span id="p2-name-display"></span>: <span id="p2-score">0</span></p>
-                <hr>
-                <p>♟️ **หมากที่เหลือ:**</p>
-                <p>⚫ <span id="p1-name-moves"></span>: <span id="p1-moves-left">100</span><br>
-                   ⚪ <span id="p2-name-moves"></span>: <span id="p2-moves-left">100</span></p>
             </div>
             <div id="controls">
-                <button onclick="passMove()" class="btn-secondary">🤝 ผ่าน</button>
-                <button onclick="surrender()" class="btn-secondary" style="background-color: #f44336; color: white;">🏳️ ยอมแพ้</button>
-                <hr>
-                <button onclick="resetGame()" class="btn-secondary" disabled>🔄 เริ่มใหม่ (ปิดใช้)</button>
-                <button onclick="gotoLobby()" class="btn-secondary">🏠 กลับสู่ Lobby</button>
+                <button onclick="gotoLobby()" class="btn-secondary">🏠 ออกจาก Lobby</button>
             </div>
         </div>
     </div>
 
-    <script>
-        const BOARD_SIZE = 15, EMPTY = 0, BLACK = 1, WHITE = 2;
-        const SCORE_KEY = 'go_leaderboard_scores', ROOMS_KEY = 'go_game_rooms', ONLINE_PLAYERS_KEY = 'go_online_players';
+    <script src="/socket.io/socket.io.js"></script>
 
-        const homeView = document.getElementById('home-view');
-        const lobbyView = document.getElementById('lobby-view');
-        const gameView = document.getElementById('game-view');
-        const waitingRoomView = document.getElementById('waiting-room-view');
+    <script>
+        const socket = io();
+        let mainPlayerName = '';
+        let currentRoomId = null;
+
+        const views = ['home-view', 'lobby-view', 'game-view', 'waiting-room-view'];
         const boardElement = document.getElementById('board');
 
-        let boardState = [], currentPlayer = BLACK, passes = 0, koPoint = null;
-        let capturedStones = { [BLACK]: 0, [WHITE]: 0 }, moveCounts = { [BLACK]: 100, [WHITE]: 100 };
-        let playerNames = { [BLACK]: "P1", [WHITE]: "P2" };
-        let mainPlayerName = '', currentRoomId = null;
-        
-        let lobbyInterval = null, waitingRoomInterval = null, gameInterval = null;
-
-        function clearAllIntervals() {
-            if (lobbyInterval) clearInterval(lobbyInterval);
-            if (waitingRoomInterval) clearInterval(waitingRoomInterval);
-            if (gameInterval) clearInterval(gameInterval);
-        }
-
         function showView(viewId) {
-            clearAllIntervals();
-            ['home-view', 'lobby-view', 'game-view', 'waiting-room-view'].forEach(id => {
-                document.getElementById(id).classList.remove('active');
-            });
+            views.forEach(id => document.getElementById(id).classList.remove('active'));
             document.getElementById(viewId).classList.add('active');
         }
 
+        // --- Step 1: Entering the Game ---
         function enterLobby() {
             const nameInput = document.getElementById('main-player-name').value;
-            if (!nameInput.trim()) { alert('กรุณาใส่ชื่อของคุณ'); return; }
+            if (!nameInput.trim()) return alert('กรุณาใส่ชื่อของคุณ');
             mainPlayerName = nameInput.trim();
-            setPlayerOnline(true);
             document.getElementById('lobby-player-name').textContent = mainPlayerName;
+            
+            // [FIXED] This is the correct way to notify the server you are online.
+            socket.emit('player_online', mainPlayerName); 
+            
             gotoLobby();
         }
-
-        function getOnlinePlayers() {
-            const players = JSON.parse(localStorage.getItem(ONLINE_PLAYERS_KEY) || '{}');
-            const now = Date.now();
-            for (const name in players) {
-                if (now - players[name].timestamp > 5000) delete players[name];
-            }
-            saveOnlinePlayers(players);
-            return players;
-        }
-
-        function saveOnlinePlayers(players) { localStorage.setItem(ONLINE_PLAYERS_KEY, JSON.stringify(players)); }
         
-        function setPlayerOnline(isOnline) {
-             const players = getOnlinePlayers();
-             if (isOnline) {
-                 players[mainPlayerName] = { timestamp: Date.now() };
-             } else {
-                 delete players[mainPlayerName];
-             }
-             saveOnlinePlayers(players);
+        function gotoLobby() {
+            showView('lobby-view');
+            socket.emit('get_rooms');
         }
         
-        function renderOnlinePlayers() {
-            const players = getOnlinePlayers();
-            const playerList = document.getElementById('online-list');
-            const onlineCount = document.getElementById('online-count');
-            const names = Object.keys(players);
-
-            onlineCount.textContent = names.length;
-            playerList.innerHTML = '';
-            if (names.length === 0) {
-                playerList.innerHTML = '<li style="color: #888;">ไม่มีใครออนไลน์ในขณะนี้...</li>';
-                return;
-            }
-            names.forEach(name => {
-                const li = document.createElement('li');
-                li.textContent = name;
-                playerList.appendChild(li);
-            });
-        }
-
-        function getRooms() { return JSON.parse(localStorage.getItem(ROOMS_KEY) || '[]'); }
-        function saveRooms(rooms) { localStorage.setItem(ROOMS_KEY, JSON.stringify(rooms)); }
-
+        // --- Step 2: Lobby Interaction ---
         function createRoom() {
-            const roomNameInput = document.getElementById('room-name-input');
-            const roomName = roomNameInput.value.trim();
-            if (!roomName) { alert('กรุณาตั้งชื่อห้อง'); return; }
-            
-            const newRoom = { id: Date.now().toString(), name: roomName, host: mainPlayerName, challenger: null, challengerReady: false, gameStarted: false };
-            const rooms = getRooms();
-            rooms.push(newRoom);
-            saveRooms(rooms);
-            roomNameInput.value = '';
-            
-            currentRoomId = newRoom.id;
-            showView('waiting-room-view');
-            waitingRoomInterval = setInterval(renderWaitingRoom, 2000); 
-            renderWaitingRoom();
+            const roomName = document.getElementById('room-name-input').value.trim();
+            if (!roomName) return alert('กรุณาตั้งชื่อห้อง');
+            socket.emit('create_room', { name: roomName, host: mainPlayerName });
         }
-
+        
         function joinRoom(roomId) {
-            let rooms = getRooms();
-            let room = rooms.find(r => r.id === roomId);
-            if (!room || room.challenger) { 
-                alert('ห้องนี้ไม่มีอยู่แล้ว หรือมีคนเข้าแล้ว!'); 
-                renderRoomList(); 
-                return; 
-            }
-
-            room.challenger = mainPlayerName;
-            saveRooms(rooms);
-            currentRoomId = roomId;
-            showView('waiting-room-view');
-            waitingRoomInterval = setInterval(renderWaitingRoom, 2000);
-            renderWaitingRoom();
+            socket.emit('join_room', { roomId, playerName: mainPlayerName });
         }
-
-        function renderWaitingRoom() {
-            const rooms = getRooms();
-            const room = rooms.find(r => r.id === currentRoomId);
-            
-            if (!room) {
-                alert('ห้องถูกปิดโดยหัวหน้าห้อง');
-                gotoLobby();
-                return;
-            }
-
-            if (room.gameStarted) {
-                startGame(room.host, room.challenger);
-                return;
-            }
-
+        
+        // --- Step 3: Waiting Room ---
+        function renderWaitingRoom(room) {
+            currentRoomId = room.id;
+            showView('waiting-room-view');
             document.getElementById('waiting-room-name').textContent = room.name;
             document.getElementById('waiting-p1-name').textContent = room.host;
             
-            const p2StatusEl = document.getElementById('p2-status');
+            const p2Name = document.getElementById('waiting-p2-name');
+            const p2Status = document.getElementById('p2-status');
             if (room.challenger) {
-                document.getElementById('waiting-p2-name').textContent = room.challenger;
-                p2StatusEl.textContent = room.challengerReady ? 'พร้อมแล้ว' : 'กำลังรอ';
-                p2StatusEl.className = room.challengerReady ? 'status-indicator ready' : 'status-indicator waiting';
+                p2Name.textContent = room.challenger;
+                p2Status.textContent = room.challengerReady ? 'พร้อมแล้ว' : 'กำลังรอ';
+                p2Status.className = room.challengerReady ? 'status-indicator ready' : 'status-indicator waiting';
             } else {
-                document.getElementById('waiting-p2-name').textContent = '...กำลังรอผู้เล่น...';
-                p2StatusEl.textContent = 'รอ';
-                p2StatusEl.className = 'status-indicator waiting';
+                p2Name.textContent = '...กำลังรอผู้เล่น...';
+                p2Status.textContent = 'รอ';
+                p2Status.className = 'status-indicator waiting';
             }
 
             const isHost = mainPlayerName === room.host;
-            document.getElementById('host-controls').style.display = isHost ? 'block' : 'none';
-            document.getElementById('challenger-controls').style.display = !isHost && room.challenger === mainPlayerName ? 'block' : 'none';
+            const startBtn = document.getElementById('start-game-btn');
+            const readyBtn = document.getElementById('ready-btn');
 
-            if (isHost) {
-                document.getElementById('start-game-btn').disabled = !room.challengerReady;
-            } else if (room.challenger === mainPlayerName) {
-                 const readyBtn = document.getElementById('ready-btn');
-                 readyBtn.disabled = room.challengerReady;
-                 readyBtn.textContent = room.challengerReady ? "✅ พร้อมแล้ว" : "✅ พร้อม";
-            }
+            startBtn.style.display = isHost ? 'inline-block' : 'none';
+            startBtn.disabled = !room.challengerReady;
+            startBtn.onclick = () => socket.emit('start_game', currentRoomId);
+
+            readyBtn.style.display = !isHost && room.challenger === mainPlayerName ? 'inline-block' : 'none';
+            readyBtn.disabled = room.challengerReady;
+            readyBtn.onclick = () => socket.emit('player_ready', currentRoomId);
         }
 
-        function playerReady() {
-            let rooms = getRooms();
-            let room = rooms.find(r => r.id === currentRoomId);
-            if (room && room.challenger === mainPlayerName) {
-                room.challengerReady = true;
-                saveRooms(rooms);
-                renderWaitingRoom();
-            }
-        }
-        
-        function attemptStartGame() {
-            const rooms = getRooms();
-            const room = rooms.find(r => r.id === currentRoomId);
-            if (room && room.challengerReady) {
-                room.gameStarted = true;
-                const initialState = createInitialGameState(room.host, room.challenger);
-                localStorage.setItem(`game_${currentRoomId}`, JSON.stringify(initialState));
-                
-                saveRooms(rooms);
-                startGame(room.host, room.challenger);
-            }
-        }
-
-        function leaveRoom() {
-            let rooms = getRooms();
-            const room = rooms.find(r => r.id === currentRoomId);
-            if (!room) { gotoLobby(); return; }
-
-            let updatedRooms;
-            if (mainPlayerName === room.host) {
-                updatedRooms = rooms.filter(r => r.id !== currentRoomId);
-                 localStorage.removeItem(`game_${currentRoomId}`);
-            } else {
-                room.challenger = null;
-                room.challengerReady = false;
-                updatedRooms = rooms;
-            }
-            saveRooms(updatedRooms);
-            currentRoomId = null;
-            gotoLobby();
-        }
-
-        function renderRoomList() {
-            const rooms = getRooms();
-            const availableRooms = rooms.filter(r => !r.gameStarted);
-
-            document.getElementById('room-count').textContent = availableRooms.length;
-            document.getElementById('room-list').innerHTML = availableRooms.length === 0 ? '<p style="color: #888; text-align: center;">ยังไม่มีห้องว่าง...</p>' : '';
-            
-            availableRooms.forEach(room => {
-                const roomItem = document.createElement('div');
-                roomItem.className = 'room-item';
-                let actionButton = room.challenger ? `<button class="btn-join" disabled>กำลังรอ</button>` : `<button class="btn-join" onclick="joinRoom('${room.id}')">เข้าร่วม</button>`;
-                roomItem.innerHTML = `<div class="room-details"><strong>${room.name}</strong><br><span>สร้างโดย: ${room.host}</span></div> ${actionButton}`;
-                document.getElementById('room-list').appendChild(roomItem);
-            });
-        }
-        
-        // --- Game Logic Section ---
-        
-        function startGame(hostName, challengerName) {
-            clearAllIntervals();
-            createBoardGrid();
-            showView('game-view');
-            gameInterval = setInterval(syncGameState, 1000);
-            syncGameState();
-        }
-
-        function syncGameState() {
-            const gameStateJSON = localStorage.getItem(`game_${currentRoomId}`);
-            if (!gameStateJSON) {
-                alert("จบเกมแล้ว หรือฝ่ายตรงข้ามออกจากห้อง");
-                gotoLobby();
-                return;
-            }
-            const gameState = JSON.parse(gameStateJSON);
-
-            boardState = gameState.boardState;
-            currentPlayer = gameState.currentPlayer;
-            capturedStones = gameState.capturedStones;
-            moveCounts = gameState.moveCounts;
-            passes = gameState.passes;
-            koPoint = gameState.koPoint;
-            playerNames = gameState.playerNames;
-
-            renderBoardStones();
-            updatePlayerDisplay();
-            updateScoreDisplay();
-            updateMoveCountDisplay();
-            renderMyPlayerInfo(); // [MODIFIED]
-        }
-        
-        // [MODIFIED] Renders the current player's info box on the left
-        function renderMyPlayerInfo() {
-            const scores = getScores();
-            const myScore = scores[mainPlayerName] || 0;
-            const myRank = getRank(myScore);
-            const myColor = playerNames[BLACK] === mainPlayerName ? BLACK : WHITE;
-            const colorSymbol = myColor === BLACK ? '⚫' : '⚪';
-
-            document.getElementById('my-info-name').textContent = `${colorSymbol} ${mainPlayerName}`;
-            const myRankEl = document.getElementById('my-info-rank');
-            myRankEl.textContent = `Rank: ${myRank.name}`;
-            myRankEl.style.color = myRank.color;
-            document.getElementById('my-info-score').textContent = `Score: ${myScore}`;
-        }
-
-
-        function handleMove(r, c) {
-            if (playerNames[currentPlayer] !== mainPlayerName) return;
-            if (moveCounts[currentPlayer] <= 0) return alert(`คุณใช้หมากครบ 100 ครั้งแล้ว!`);
-            if (boardState[r][c] !== EMPTY) return alert('จุดนี้ถูกวางหินแล้ว!');
-            
-            let isConnected = false;
-            getNeighbors(r, c).forEach(n => { if (boardState[n.r][n.c] !== EMPTY) isConnected = true; });
-            if (!isConnected) return alert('ต้องวางหมากต่อจากหมากที่มีอยู่บนกระดานเท่านั้น!');
-
-            const opponent = currentPlayer === BLACK ? WHITE : BLACK;
-            const originalState = JSON.parse(JSON.stringify(boardState));
-            let stonesCaptured = 0, capturedGroups = [];
-            boardState[r][c] = currentPlayer;
-
-            getNeighbors(r, c).forEach(n => {
-                if (boardState[n.r][n.c] === opponent) {
-                    const { group, libertiesCount } = findGroupAndLiberties(n.r, n.c, opponent);
-                    if (libertiesCount === 0) { capturedGroups.push(group); stonesCaptured += group.length; }
-                }
-            });
-
-            if (stonesCaptured === 0 && findGroupAndLiberties(r, c, currentPlayer).libertiesCount === 0) {
-                boardState = originalState; return alert('ไม่สามารถวางหินในจุดฆ่าตัวตายได้');
-            }
-            if (koPoint && koPoint.r === r && koPoint.c === c && stonesCaptured === 1 && capturedGroups.flat().length === 1) {
-                boardState = originalState; return alert('กฎ Ko: ไม่สามารถจับหินซ้ำตำแหน่งเดิมทันที');
-            }
-            
-            capturedGroups.flat().forEach(s => { boardState[s.r][s.c] = EMPTY; });
-            koPoint = (stonesCaptured === 1 && capturedGroups.flat().length === 1) ? capturedGroups.flat()[0] : null;
-
-            moveCounts[currentPlayer]--;
-            capturedStones[currentPlayer] += stonesCaptured;
-            passes = 0;
-            switchPlayer();
-
-            const gameState = { boardState, currentPlayer, capturedStones, moveCounts, passes, koPoint, playerNames };
-            localStorage.setItem(`game_${currentRoomId}`, JSON.stringify(gameState));
-            
-            syncGameState();
-        }
-
-        function gotoLobby() {
-            if(currentRoomId) {
-                localStorage.removeItem(`game_${currentRoomId}`);
-                const rooms = getRooms().filter(r => r.id !== currentRoomId);
-                saveRooms(rooms);
-                currentRoomId = null;
-            }
-            showView('lobby-view');
-            renderRoomList();
-            renderLeaderboard();
-            renderOnlinePlayers();
-            lobbyInterval = setInterval(() => {
-                setPlayerOnline(true);
-                renderRoomList();
-                renderOnlinePlayers();
-            }, 2000);
-        }
-        
-        function getScores(){const scores=localStorage.getItem(SCORE_KEY);return scores?JSON.parse(scores):{}}
-        function saveScore(winner,loser,isDraw=!1){const scores=getScores();isDraw?(scores[winner]=(scores[winner]||0)+1,scores[loser]=(scores[loser]||0)+1):(scores[winner]=(scores[winner]||0)+3,scores[loser]=(scores[loser]||0)+1),localStorage.setItem(SCORE_KEY,JSON.stringify(scores))}
-        function getRank(score) { if (score >= 1001) return { name: 'Master', color: '#9B59B6' }; if (score >= 501) return { name: 'Gold', color: '#F1C40F' }; if (score >= 101) return { name: 'Silver', color: '#95A5A6' }; return { name: 'Bronze', color: '#CD7F32' }; }
-        function renderLeaderboard() { const scores = getScores(); const tableBody = document.querySelector("#score-table tbody"); tableBody.innerHTML = ""; const sorted = Object.entries(scores).sort(([, a], [, b]) => b - a); if (sorted.length === 0) { tableBody.innerHTML = '<tr><td colspan="3" style="text-align:center;">ยังไม่มีข้อมูล...</td></tr>'; return; } sorted.forEach(([name, score]) => { const rank = getRank(score); const row = tableBody.insertRow(); row.innerHTML = `<td><span style="color: ${rank.color}; font-weight: 600;">${rank.name}</span></td><td>${name}</td><td style="font-weight: bold;">${score}</td>`; }); }
-        function getNeighbors(r,c){const n=[],d=[[0,1],[0,-1],[1,0],[-1,0]];for(const[t,a]of d){const o=r+t,e=c+a;o>=0&&o<15&&e>=0&&e<15&&n.push({r:o,c:e})}return n}
-        function findGroupAndLiberties(r,c,o){const e=[],l=new Set,a={},i=[{r:r,c:c}];if(boardState[r][c]!==o)return{group:[],libertiesCount:0};for(;i.length>0;){const r=i.pop(),c=`${r.r},${r.c}`;if(a[c])continue;a[c]=!0,e.push(r),getNeighbors(r.r,r.c).forEach(r=>{const c=`${r.r},${r.c}`,d=boardState[r.r][r.c];d===EMPTY?l.add(c):d===o&&!a[c]&&i.push(r)})}return{group:e,libertiesCount:l.size}}
-        
-        function renderBoardStones(){
-            let i = 0;
-            for(let r=0; r < BOARD_SIZE; r++) {
-                for(let c=0; c < BOARD_SIZE; c++) {
-                    const cell = boardElement.children[i];
-                    if (!cell) continue;
-                    cell.innerHTML = "";
-                    if (boardState[r] && boardState[r][c] !== EMPTY) {
-                        const stone = document.createElement("div");
-                        stone.classList.add("stone", boardState[r][c] === BLACK ? "black" : "white");
-                        cell.appendChild(stone);
-                    }
-                    i++;
-                }
-            }
-        }
-
-        function switchPlayer(){currentPlayer=currentPlayer===BLACK?WHITE:BLACK}
-        
-        function updatePlayerDisplay() {
-            const turnText = currentPlayer === BLACK ? "ดำ" : "ขาว";
-            document.getElementById('current-player').textContent = turnText;
-            document.getElementById('current-player-name').textContent = playerNames[currentPlayer];
-            document.body.className = currentPlayer === BLACK ? "black-turn" : "white-turn";
-            document.getElementById('p1-turn-indicator').classList.toggle('active', currentPlayer === BLACK);
-            document.getElementById('p2-turn-indicator').classList.toggle('active', currentPlayer === WHITE);
-        }
-        
-        function updateScoreDisplay(){document.getElementById("p1-name-display").textContent = playerNames[BLACK]; document.getElementById("p2-name-display").textContent = playerNames[WHITE]; document.getElementById("p1-score").textContent=capturedStones[BLACK]; document.getElementById("p2-score").textContent=capturedStones[WHITE]}
-        function updateMoveCountDisplay(){document.getElementById("p1-name-moves").textContent = playerNames[BLACK]; document.getElementById("p2-name-moves").textContent = playerNames[WHITE]; document.getElementById("p1-moves-left").textContent=moveCounts[BLACK]; document.getElementById("p2-moves-left").textContent=moveCounts[WHITE]}
-        function surrender(){const winnerName = playerNames[currentPlayer === BLACK ? WHITE : BLACK], loserName = playerNames[currentPlayer]; alert(`${winnerName} ชนะ! ${loserName} ยอมแพ้`); endGame(winnerName, loserName)}
-        function passMove() { switchPlayer(); const gameState = { boardState, currentPlayer, capturedStones, moveCounts, passes, koPoint, playerNames }; localStorage.setItem(`game_${currentRoomId}`, JSON.stringify(gameState)); syncGameState(); }
-        function endGame(winnerName,loserName){saveScore(winnerName,loserName);gotoLobby()}
-        function resetGame(){}
-        
+        // --- Step 4: Game Play ---
         function createBoardGrid() {
             boardElement.innerHTML = "";
-            for (let r = 0; r < BOARD_SIZE; r++) {
-                for (let c = 0; c < BOARD_SIZE; c++) {
+            for (let r = 0; r < 15; r++) {
+                for (let c = 0; c < 15; c++) {
                     const cell = document.createElement("div");
-                    cell.classList.add("intersection");
-                    cell.addEventListener("click", () => handleMove(r, c));
+                    cell.className = "intersection";
+                    cell.onclick = () => socket.emit('make_move', { roomId: currentRoomId, r, c });
                     boardElement.appendChild(cell);
                 }
             }
         }
 
-        function createInitialGameState(hostName, challengerName) {
-            let initialBoardState = Array(15).fill(0).map(() => Array(15).fill(EMPTY));
-            const center = Math.floor(15 / 2);
-            initialBoardState[center - 1][center] = BLACK;
-            initialBoardState[center + 1][center] = BLACK;
-            initialBoardState[center][center - 1] = WHITE;
-            initialBoardState[center][center + 1] = WHITE;
+        function updateGameUI(state) {
+            const { boardState, currentPlayer, capturedStones, playerNames } = state;
             
-            return {
-                boardState: initialBoardState,
-                currentPlayer: BLACK,
-                capturedStones: { [BLACK]: 0, [WHITE]: 0 },
-                moveCounts: { [BLACK]: 100, [WHITE]: 100 },
-                passes: 0,
-                koPoint: null,
-                playerNames: { [BLACK]: challengerName, [WHITE]: hostName }
-            };
-        }
+            // Render stones
+            let i = 0;
+            for(let r=0; r<15; r++) {
+                for(let c=0; c<15; c++) {
+                    const cell = boardElement.children[i];
+                    if(!cell) continue;
+                    cell.innerHTML = "";
+                    if (boardState[r] && boardState[r][c] !== 0) {
+                        const stone = document.createElement("div");
+                        stone.className = `stone ${boardState[r][c] === 1 ? 'black' : 'white'}`;
+                        cell.appendChild(stone);
+                    }
+                    i++;
+                }
+            }
 
-        window.addEventListener('beforeunload', () => {
-            if (mainPlayerName) setPlayerOnline(false);
+            // Update info
+            document.getElementById('current-player-name').textContent = playerNames[currentPlayer];
+            document.getElementById('p1-name-display').textContent = playerNames['1'];
+            document.getElementById('p2-name-display').textContent = playerNames['2'];
+            document.getElementById('p1-score').textContent = capturedStones['1'];
+            document.getElementById('p2-score').textContent = capturedStones['2'];
+            document.getElementById('p1-turn-indicator').classList.toggle('active', currentPlayer === 1);
+            document.getElementById('p2-turn-indicator').classList.toggle('active', currentPlayer === 2);
+
+            const myColor = playerNames['1'] === mainPlayerName ? 1 : 2;
+            document.getElementById('my-info-name').textContent = `${myColor === 1 ? '⚫' : '⚪'} ${mainPlayerName}`;
+        }
+        
+        // --- Listening to Server Events ---
+        socket.on('update_online_players', (players) => {
+            const list = document.getElementById('online-list');
+            const count = document.getElementById('online-count');
+            list.innerHTML = '';
+            count.textContent = players.length;
+            players.forEach(name => {
+                const li = document.createElement('li');
+                li.textContent = name;
+                list.appendChild(li);
+            });
         });
 
-        // Initial Load
+        socket.on('update_room_list', (rooms) => {
+            const list = document.getElementById('room-list');
+            const count = document.getElementById('room-count');
+            const available = rooms.filter(r => !r.gameStarted);
+            list.innerHTML = '';
+            count.textContent = available.length;
+            available.forEach(room => {
+                const item = document.createElement('div');
+                item.className = 'room-item';
+                let actionBtn = room.challenger ? `<button disabled>กำลังรอ</button>` : `<button class="btn-join" onclick="joinRoom('${room.id}')">เข้าร่วม</button>`;
+                item.innerHTML = `<div><strong>${room.name}</strong><br><span>โดย: ${room.host}</span></div> ${actionBtn}`;
+                list.appendChild(item);
+            });
+        });
+        
+        socket.on('joined_room', (room) => renderWaitingRoom(room));
+        socket.on('player_joined', (room) => renderWaitingRoom(room));
+        socket.on('opponent_ready', (room) => renderWaitingRoom(room));
+
+        socket.on('game_started', (room) => {
+            currentRoomId = room.id;
+            showView('game-view');
+            createBoardGrid();
+            updateGameUI(room.gameState);
+        });
+
+        socket.on('update_game_state', (gameState) => {
+            updateGameUI(gameState);
+        });
+
+        // --- Initial Load ---
         showView('home-view');
     </script>
 </body>
