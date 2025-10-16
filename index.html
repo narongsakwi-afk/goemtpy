@@ -2,10 +2,10 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <title>เกมหมากล้อม (Go) - Debug Version</title>
+    <title>เกมหมากล้อม (Go) - ระบบออนไลน์ v2.4</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
-        :root{--board-size:15;--cell-size:28px;--color-light-bg:#f9f9f9;--color-dark-bg:#e0e0e0;--color-board:#f7d794;--color-wood-dark:#b8860b}body{font-family:'Kanit',sans-serif;display:flex;flex-direction:column;align-items:center;padding:10px;margin:0;background-color:var(--color-dark-bg);min-height:100vh;color:#333}h1,h2,h3{font-weight:600;color:#1e3a5f;margin-bottom:15px}#home-view,#lobby-view,#game-view,#waiting-room-view{display:none;width:100%;max-width:1200px;align-items:center;flex-direction:column;padding:15px}#home-view.active,#lobby-view.active,#game-view.active,#waiting-room-view.active{display:flex}.card{background-color:#fff;border-radius:12px;box-shadow:0 8px 16px rgba(0,0,0,.15);padding:25px;margin-bottom:20px;width:100%;box-sizing:border-box}#home-view input,#create-room-section input{padding:10px;margin:5px 0 15px 10px;border:1px solid #ccc;border-radius:6px;font-size:16px;width:60%}button{padding:12px 25px;font-size:18px;margin:10px 8px;cursor:pointer;border:none;border-radius:8px;font-weight:600}#online-players-section{text-align:left}#online-list{list-style-type:none;padding-left:0}#online-list li{padding:5px 0;border-bottom:1px solid #f0f0f0;color:#2e7d32;font-weight:500}#online-list li::before{content:'🟢 '}#room-list{display:flex;flex-direction:column;gap:15px;margin-top:10px}.room-item{display:flex;justify-content:space-between;align-items:center;padding:15px;background-color:#f9f9f9;border-radius:8px;border:1px solid #eee}.player-slots{display:flex;justify-content:space-around;width:100%;margin:20px 0}.player-slot{width:45%;padding:20px;border:1px solid #ddd;border-radius:8px;text-align:center}.status-indicator{display:inline-block;padding:5px 12px;border-radius:15px;font-size:.9em;font-weight:600;background-color:#f8d7da;color:#721c24}.status-indicator.ready{background-color:#d4edda;color:#155724}#game-view{flex-direction:row;align-items:flex-start;position:relative}#game-container{flex-shrink:0;text-align:center}#controls-panel{min-width:250px;text-align:center}#board{display:grid;grid-template-columns:repeat(var(--board-size),1fr);width:calc(var(--board-size) * var(--cell-size));height:calc(var(--board-size) * var(--cell-size));background-color:var(--color-board);border:4px solid var(--color-wood-dark)}.intersection{border-right:1px solid #333;border-bottom:1px solid #333;cursor:pointer;box-sizing:border-box;display:flex;justify-content:center;align-items:center;position:relative}.stone{width:80%;height:80%;border-radius:50%;position:absolute}
+        :root{--board-size:15;--cell-size:28px;--color-light-bg:#f9f9f9;--color-dark-bg:#e0e0e0;--color-board:#f7d794;--color-wood-dark:#b8860b;--color-button:#4a90e2;--color-button-hover:#357ABD;--color-black:#000;--color-white:#fff;--font-family:'Kanit',sans-serif;--bg-color:var(--color-dark-bg)}body{font-family:var(--font-family);display:flex;flex-direction:column;align-items:center;padding:10px;margin:0;background-color:var(--bg-color);transition:background-color .4s ease;min-height:100vh;color:#333}h1,h2,h3{font-weight:600;color:#1e3a5f;margin-bottom:15px}#home-view,#lobby-view,#game-view,#waiting-room-view{display:none;width:100%;max-width:1200px;align-items:center;flex-direction:column;padding:15px}#home-view.active,#lobby-view.active,#game-view.active,#waiting-room-view.active{display:flex}.card{background-color:var(--color-white);border-radius:12px;box-shadow:0 8px 16px rgba(0,0,0,.15);padding:25px;margin-bottom:20px;width:100%;box-sizing:border-box}#home-view input,#create-room-section input{padding:10px;margin:5px 0 15px 10px;border:1px solid #ccc;border-radius:6px;font-size:16px;width:60%}button{padding:12px 25px;font-size:18px;margin:10px 8px;cursor:pointer;border:none;border-radius:8px;font-weight:600;transition:background-color .3s,transform .1s}button:disabled{background-color:#ccc;cursor:not-allowed}#online-players-section{text-align:left}#online-list{list-style-type:none;padding-left:0}#online-list li{padding:5px 0;border-bottom:1px solid #f0f0f0;color:#2e7d32;font-weight:500}#online-list li::before{content:'🟢 '}#room-list{display:flex;flex-direction:column;gap:15px;margin-top:10px}.room-item{display:flex;justify-content:space-between;align-items:center;padding:15px;background-color:#f9f9f9;border-radius:8px;border:1px solid #eee}.player-slots{display:flex;justify-content:space-around;width:100%;margin:20px 0}.player-slot{width:45%;padding:20px;border:1px solid #ddd;border-radius:8px;text-align:center}.status-indicator{display:inline-block;padding:5px 12px;border-radius:15px;font-size:.9em;font-weight:600}#game-view{flex-direction:row;align-items:flex-start;position:relative}#player-info-container{width:220px;flex-shrink:0;margin-right:20px}.player-info-card{background:#fff;padding:15px;border-radius:8px;margin-bottom:15px;box-shadow:0 2px 4px rgba(0,0,0,.05)}#game-container{flex-shrink:0;text-align:center}#controls-panel{min-width:250px;text-align:center}#board{display:grid;grid-template-columns:repeat(var(--board-size),1fr);width:calc(var(--board-size) * var(--cell-size));height:calc(var(--board-size) * var(--cell-size));background-color:var(--color-board);border:4px solid var(--color-wood-dark)}.intersection{border-right:1px solid #333;border-bottom:1px solid #333;cursor:pointer;box-sizing:border-box;display:flex;justify-content:center;align-items:center;position:relative}.stone{width:80%;height:80%;border-radius:50%;position:absolute;box-shadow:0 2px 4px rgba(0,0,0,.4),inset 0 0 5px rgba(255,255,255,.4)}
         #developer-credit {position: fixed; bottom: 10px; right: 15px; font-size: 0.8em; color: #777; z-index: 9999;}
     </style>
 </head>
@@ -13,6 +13,7 @@
 
     <div id="home-view" class="card active">
         <h2>ยินดีต้อนรับสู่เกมหมากล้อม (Go)</h2>
+        <p>กรุณาใส่ชื่อของคุณเพื่อเข้าสู่ล็อบบี้</p>
         <input type="text" id="main-player-name" placeholder="ชื่อของคุณ" required>
         <button onclick="enterLobby()">🚪 เข้าสู่ล็อบบี้</button>
     </div>
@@ -20,16 +21,26 @@
     <div id="lobby-view" class="card">
         <h2>Lobby</h2>
         <p>สวัสดี, <strong id="lobby-player-name"></strong>!</p>
-        <div id="online-players-section" class="card"><h3>👥 ผู้เล่นที่ออนไลน์ (<span id="online-count">0</span>)</h3><ul id="online-list"></ul></div>
-        <div id="create-room-section" class="card"><h3>สร้างห้องใหม่</h3><input type="text" id="room-name-input" placeholder="ใส่ชื่อห้อง..." required><button onclick="createRoom()">➕ สร้างห้อง</button></div>
-        <div id="open-rooms-section" class="card"><h3>ห้องที่กำลังรอผู้เล่น ( <span id="room-count">0</span> )</h3><div id="room-list"></div></div>
+        <div id="online-players-section" class="card">
+            <h3>👥 ผู้เล่นที่ออนไลน์ (<span id="online-count">0</span>)</h3>
+            <ul id="online-list"></ul>
+        </div>
+        <div id="create-room-section" class="card">
+            <h3>สร้างห้องใหม่</h3>
+            <input type="text" id="room-name-input" placeholder="ใส่ชื่อห้อง..." required>
+            <button onclick="createRoom()">➕ สร้างห้อง</button>
+        </div>
+        <div id="open-rooms-section" class="card">
+            <h3>ห้องที่กำลังรอผู้เล่น ( <span id="room-count">0</span> )</h3>
+            <div id="room-list"></div>
+        </div>
     </div>
 
     <div id="waiting-room-view" class="card">
         <h2>ห้องรอเล่น: <span id="waiting-room-name"></span></h2>
         <div class="player-slots">
             <div class="player-slot"><p><strong>⚪ หัวหน้าห้อง</strong></p><p id="waiting-p1-name">...</p></div>
-            <div class="player-slot"><p><strong>⚫ ผู้ท้าชิง</strong></p><p id="waiting-p2-name">...กำลังรอ...</p><div id="challenger-status-indicator" class="status-indicator">รอ</div></div>
+            <div class="player-slot"><p><strong>⚫ ผู้ท้าชิง</strong></p><p id="waiting-p2-name">...กำลังรอ...</p></div>
         </div>
         <div id="waiting-room-controls">
              <button id="start-game-btn" style="display:none;">▶️ เริ่มเกม</button>
@@ -39,14 +50,21 @@
     </div>
 
     <div id="game-view">
-        <div id="my-player-info" class="player-info-card"><h4 id="my-info-name">My Name</h4></div>
-        <div id="game-container"><div id="board"></div></div>
+        <div id="my-player-info" class="player-info-card">
+            <h4 id="my-info-name">My Name</h4>
+        </div>
+        <div id="game-container">
+            <div id="board"></div>
+        </div>
         <div id="controls-panel">
             <div id="current-status" class="card">
                 <p><strong>ตาเดิน:</strong> <span id="current-player-name"></span></p><hr>
-                <p><strong>หินที่จับได้:</strong> ⚫ <span id="p1-captured">0</span> | ⚪ <span id="p2-captured">0</span></p><hr>
-                <p><strong>ผ่านไปแล้ว:</strong> ⚫ <span id="p1-pass-count">0</span>/5 | ⚪ <span id="p2-pass-count">0</span>/5</p><hr>
-                <p><strong>หมากที่เหลือ:</strong> ⚫ <span id="p1-moves-left">100</span> | ⚪ <span id="p2-moves-left">100</span></p>
+                <p><strong>หินที่จับได้:</strong></p>
+                <p>⚫ <span id="p1-captured">0</span> | ⚪ <span id="p2-captured">0</span></p><hr>
+                <p><strong>ผ่านไปแล้ว:</strong></p>
+                <p>⚫ <span id="p1-pass-count">0</span>/5 | ⚪ <span id="p2-pass-count">0</span>/5</p><hr>
+                <p><strong>หมากที่เหลือ:</strong></p>
+                <p>⚫ <span id="p1-moves-left">100</span> | ⚪ <span id="p2-moves-left">100</span></p>
             </div>
             <div id="controls">
                 <button onclick="passMove()">🤝 ผ่าน</button>
@@ -68,13 +86,11 @@
         const boardElement = document.getElementById('board');
 
         function showView(viewId) {
-            console.log(`[Client] Changing view to: ${viewId}`);
             views.forEach(id => document.getElementById(id).classList.remove('active'));
             document.getElementById(viewId).classList.add('active');
         }
 
         function enterLobby() {
-            console.log("[Client] enterLobby() called.");
             const nameInput = document.getElementById('main-player-name').value;
             if (!nameInput.trim()) return alert('กรุณาใส่ชื่อของคุณ');
             mainPlayerName = nameInput.trim();
@@ -84,78 +100,79 @@
         }
         
         function gotoLobby() {
-            console.log("[Client] gotoLobby() called.");
             showView('lobby-view');
             socket.emit('get_rooms');
-            currentRoomId = null;
+            currentRoomId = null; // Reset current room
         }
         
+        function createRoom() {
+            const roomName = document.getElementById('room-name-input').value.trim();
+            if (!roomName) return alert('กรุณาตั้งชื่อห้อง');
+            socket.emit('create_room', { name: roomName, host: mainPlayerName });
+        }
+        
+        function joinRoom(roomId) {
+            socket.emit('join_room', { roomId, playerName: mainPlayerName });
+        }
+
+        // [FIXED] leaveRoom is now robust and works everywhere
         function leaveRoom() {
-            console.log("[Client] leaveRoom() called.");
-            socket.emit('leave_room');
+            if(currentRoomId){
+                socket.emit('leave_room', currentRoomId);
+            }
             gotoLobby();
         }
         
-        function passMove() {
-            console.log(`[Client] Emitting 'pass_move' for room: ${currentRoomId}`);
-            socket.emit('pass_move', currentRoomId); 
-        }
-
-        function surrender() { 
-            if(confirm('คุณแน่ใจว่าจะยอมแพ้?')) {
-                console.log(`[Client] Emitting 'surrender' for room: ${currentRoomId}`);
-                socket.emit('surrender', currentRoomId); 
-            }
-        }
-        
-        function createBoardGrid() {
-            boardElement.innerHTML = "";
-            for (let r = 0; r < 15; r++) {
-                for (let c = 0; c < 15; c++) {
-                    const cell = document.createElement("div");
-                    cell.className = "intersection";
-                    cell.onclick = () => {
-                        console.log(`[Client] Emitting 'make_move' for room ${currentRoomId} at (${r}, ${c})`);
-                        socket.emit('make_move', { roomId: currentRoomId, r, c });
-                    }
-                    boardElement.appendChild(cell);
-                }
-            }
-        }
-
         function renderWaitingRoom(room) {
             currentRoomId = room.id;
             showView('waiting-room-view');
             document.getElementById('waiting-room-name').textContent = room.name;
             document.getElementById('waiting-p1-name').textContent = room.host;
             document.getElementById('waiting-p2-name').textContent = room.challenger || '...กำลังรอผู้เล่น...';
-            
-            const statusIndicator = document.getElementById('challenger-status-indicator');
-            statusIndicator.textContent = room.challengerReady ? 'พร้อมแล้ว' : 'รอ';
-            statusIndicator.classList.toggle('ready', room.challengerReady);
 
             const isHost = mainPlayerName === room.host;
-            document.getElementById('start-game-btn').style.display = isHost ? 'inline-block' : 'none';
-            document.getElementById('start-game-btn').disabled = !room.challengerReady;
-            document.getElementById('start-game-btn').onclick = () => socket.emit('start_game', currentRoomId);
-            
+            const startBtn = document.getElementById('start-game-btn');
             const readyBtn = document.getElementById('ready-btn');
+
+            startBtn.style.display = isHost ? 'inline-block' : 'none';
+            startBtn.disabled = !room.challengerReady;
+            startBtn.onclick = () => socket.emit('start_game', currentRoomId);
+
             readyBtn.style.display = !isHost && room.challenger === mainPlayerName ? 'inline-block' : 'none';
             readyBtn.disabled = room.challengerReady;
             readyBtn.onclick = () => socket.emit('player_ready', currentRoomId);
         }
 
+        function createBoardGrid() {
+            boardElement.innerHTML = "";
+            for (let r = 0; r < 15; r++) {
+                for (let c = 0; c < 15; c++) {
+                    const cell = document.createElement("div");
+                    cell.className = "intersection";
+                    cell.onclick = () => socket.emit('make_move', { roomId: currentRoomId, r, c });
+                    boardElement.appendChild(cell);
+                }
+            }
+        }
+
         function updateGameUI(state) {
             const { boardState, currentPlayer, playerNames, moveCounts, passCounts, capturedStones } = state;
+            
             let i = 0;
-            for(let r=0; r<15; r++) { for(let c=0; c<15; c++) {
-                const cell = boardElement.children[i]; if(!cell) continue; cell.innerHTML = "";
-                if (boardState[r][c] !== 0) {
-                    const stone = document.createElement("div");
-                    stone.className = `stone ${boardState[r][c] === 1 ? 'black' : 'white'}`;
-                    cell.appendChild(stone);
-                } i++;
-            }}
+            for(let r=0; r<15; r++) {
+                for(let c=0; c<15; c++) {
+                    const cell = boardElement.children[i];
+                    if(!cell) continue;
+                    cell.innerHTML = "";
+                    if (boardState[r] && boardState[r][c] !== 0) {
+                        const stone = document.createElement("div");
+                        stone.className = `stone ${boardState[r][c] === 1 ? 'black' : 'white'}`;
+                        cell.appendChild(stone);
+                    }
+                    i++;
+                }
+            }
+            
             document.getElementById('current-player-name').textContent = playerNames[currentPlayer];
             document.getElementById('p1-captured').textContent = capturedStones['1'];
             document.getElementById('p2-captured').textContent = capturedStones['2'];
@@ -167,23 +184,27 @@
             document.getElementById('my-info-name').textContent = `${myColor === 1 ? '⚫' : '⚪'} ${mainPlayerName}`;
         }
         
-        // --- Listening to Server Events ---
-        socket.on('connect', () => {
-            console.log('[Client] Connected to server!');
-        });
-        
+        function passMove() { socket.emit('pass_move', currentRoomId); }
+        function surrender() { if(confirm('คุณแน่ใจว่าจะยอมแพ้?')) socket.emit('surrender', currentRoomId); }
+
         socket.on('update_online_players', (players) => {
             const list = document.getElementById('online-list');
             const count = document.getElementById('online-count');
-            list.innerHTML = ''; count.textContent = players.length;
-            players.forEach(name => { const li = document.createElement('li'); li.textContent = name; list.appendChild(li); });
+            list.innerHTML = '';
+            count.textContent = players.length;
+            players.forEach(name => {
+                const li = document.createElement('li');
+                li.textContent = name;
+                list.appendChild(li);
+            });
         });
 
         socket.on('update_room_list', (rooms) => {
             const list = document.getElementById('room-list');
             const count = document.getElementById('room-count');
             const available = rooms.filter(r => !r.gameStarted);
-            list.innerHTML = ''; count.textContent = available.length;
+            list.innerHTML = '';
+            count.textContent = available.length;
             available.forEach(room => {
                 const item = document.createElement('div');
                 item.className = 'room-item';
@@ -193,27 +214,34 @@
             });
         });
         
-        socket.on('update_waiting_room', (room) => renderWaitingRoom(room));
+        socket.on('joined_room', (room) => renderWaitingRoom(room));
+        socket.on('player_joined', (room) => renderWaitingRoom(room));
+        socket.on('opponent_ready', (room) => renderWaitingRoom(room));
 
         socket.on('game_started', (room) => {
-            console.log("[Client] Event 'game_started' received. Starting game.");
             currentRoomId = room.id;
             showView('game-view');
             createBoardGrid();
             updateGameUI(room.gameState);
         });
 
-        socket.on('update_game_state', (gameState) => { 
-            console.log("[Client] Event 'update_game_state' received.");
+        socket.on('update_game_state', (gameState) => {
             updateGameUI(gameState);
         });
-        
-        socket.on('game_over', ({ winner, reason }) => { 
+
+        socket.on('game_over', ({ winner, reason }) => {
             alert(`จบเกมแล้ว!\nผู้ชนะ: ${winner}\nเหตุผล: ${reason}`);
-            gotoLobby(); 
+            gotoLobby();
         });
         
-        socket.on('invalid_move', ({ error }) => { alert(`วางหมากไม่ได้: ${error}`); });
+        socket.on('invalid_move', ({ error }) => {
+            alert(`วางหมากไม่ได้: ${error}`);
+        });
+
+        // [FIXED] This ensures you are taken to lobby if the server forces it
+        socket.on('redirect_to_lobby', () => {
+            gotoLobby();
+        });
 
         showView('home-view');
     </script>
