@@ -9,35 +9,34 @@ const io = new Server(server);
 
 const PORT = process.env.PORT || 3000;
 
-// Serve the index.html file
 app.use(express.static(path.join(__dirname, '')));
 
-// This will store all our game data instead of localStorage
 const gameState = {
-    players: {}, // Tracks online players
-    rooms: {}    // Tracks all room and game data
+    players: {},
+    rooms: {}
 };
 
 io.on('connection', (socket) => {
     console.log(`User connected: ${socket.id}`);
 
-    // --- Player Management ---
     socket.on('player_online', (playerName) => {
-        gameState.players[socket.id] = playerName;
-        socket.broadcast.emit('update_online_players', Object.values(gameState.players));
-        socket.emit('update_online_players', Object.values(gameState.players));
-        console.log('Online players:', Object.values(gameState.players));
+        gameState.players[socket.id] = { name: playerName };
+        io.emit('update_online_players', Object.values(gameState.players).map(p => p.name));
     });
 
-    // --- Room Management ---
     socket.on('get_rooms', () => {
         socket.emit('update_room_list', Object.values(gameState.rooms));
     });
     
     socket.on('create_room', (roomData) => {
         const roomId = `room_${socket.id}`;
-        gameState.rooms[roomId] = { ...roomData, id: roomId, hostSocket: socket.id, players: {[socket.id]: roomData.host} };
+        gameState.rooms[roomId] = { ...roomData, id: roomId, hostSocket: socket.id };
+        
+        // [FIX #1] ให้ Host เข้าร่วม "ห้อง" ของตัวเองทันทีที่สร้าง
+        socket.join(roomId); 
+        
         io.emit('update_room_list', Object.values(gameState.rooms));
+        socket.emit('joined_room', gameState.rooms[roomId]); // ส่งข้อมูลห้องกลับไปให้ Host
     });
     
     socket.on('join_room', ({ roomId, playerName }) => {
@@ -45,10 +44,13 @@ io.on('connection', (socket) => {
         if (room && !room.challenger) {
             room.challenger = playerName;
             room.challengerSocket = socket.id;
-            room.players[socket.id] = playerName;
+            
+            // [FIX #2] ให้ Challenger เข้าร่วม "ห้อง" ด้วย
             socket.join(roomId);
-            io.to(room.hostSocket).emit('player_joined', room); // Notify host
-            socket.emit('joined_room', room); // Confirm join to challenger
+            
+            // [FIX #3] แจ้งทุกคนในห้องว่ามีคนเข้ามา (รวมถึง Host)
+            io.to(roomId).emit('player_joined', room);
+            
             io.emit('update_room_list', Object.values(gameState.rooms));
         }
     });
@@ -57,18 +59,20 @@ io.on('connection', (socket) => {
         const room = gameState.rooms[roomId];
         if (room) {
             room.challengerReady = true;
+            // แจ้ง Host ว่าอีกฝ่ายพร้อมแล้ว
             io.to(room.hostSocket).emit('opponent_ready', room);
         }
     });
 
-    // --- Game Logic ---
     socket.on('start_game', (roomId) => {
         const room = gameState.rooms[roomId];
         if (room && room.challengerReady) {
             room.gameStarted = true;
             room.gameState = createInitialGameState(room.host, room.challenger);
-            io.to(roomId).emit('game_started', room); // Tell both players in room to start
-            io.to(room.hostSocket).emit('game_started', room); // Also host
+            
+            // [FIX #4] ส่งสัญญาณเริ่มเกมไปให้ "ทุกคนในห้อง" พร้อมกัน
+            io.to(roomId).emit('game_started', room);
+            
             io.emit('update_room_list', Object.values(gameState.rooms));
         }
     });
@@ -76,50 +80,52 @@ io.on('connection', (socket) => {
     socket.on('make_move', ({ roomId, r, c }) => {
         const room = gameState.rooms[roomId];
         if (room && room.gameState) {
-            // Server-side validation and move handling will go here
-            // For now, we just update and broadcast
-            handleMoveServer(room.gameState, r, c, socket.id, room.players);
-            io.to(room.hostSocket).emit('update_game_state', room.gameState);
-            io.to(room.challengerSocket).emit('update_game_state', room.gameState);
+            const playerColor = room.gameState.playerNames['1'] === gameState.players[socket.id].name ? 1 : 2;
+            
+            // ตรวจสอบว่าเป็นตาของผู้เล่นคนนั้นจริงๆ
+            if (room.gameState.currentPlayer === playerColor) {
+                const moveSuccess = handleMoveServer(room.gameState, r, c);
+                if (moveSuccess) {
+                    // [FIX #5] ส่งสถานะเกมที่อัปเดตแล้วไปให้ "ทุกคนในห้อง"
+                    io.to(roomId).emit('update_game_state', room.gameState);
+                }
+            }
         }
     });
 
     socket.on('disconnect', () => {
         console.log(`User disconnected: ${socket.id}`);
-        delete gameState.players[socket.id];
-        // Handle player leaving a room or game
-        // ... (more logic needed for robustness)
-        io.emit('update_online_players', Object.values(gameState.players));
+        // ... (ส่วนจัดการผู้เล่นออกจากเกม ยังคงเหมือนเดิม) ...
+        const player = gameState.players[socket.id];
+        if (player) {
+            delete gameState.players[socket.id];
+            io.emit('update_online_players', Object.values(gameState.players).map(p => p.name));
+        }
     });
 });
 
-
-// Helper functions (could be in another file)
+// --- Server-Side Game Logic (No changes needed here) ---
 function createInitialGameState(hostName, challengerName) {
     let board = Array(15).fill(0).map(() => Array(15).fill(0));
     const center = Math.floor(15 / 2);
     board[center - 1][center] = 1; board[center + 1][center] = 1;
     board[center][center - 1] = 2; board[center][center + 1] = 2;
     return {
-        boardState: board, currentPlayer: 1, // Black starts
-        capturedStones: { '1': 0, '2': 0 }, moveCounts: { '1': 100, '2': 100 },
-        passes: 0, koPoint: null,
+        boardState: board, currentPlayer: 1, capturedStones: { '1': 0, '2': 0 },
+        moveCounts: { '1': 100, '2': 100 }, passes: 0, koPoint: null,
         playerNames: { '1': challengerName, '2': hostName }
     };
 }
 
-function handleMoveServer(gameState, r, c, socketId, players) {
-    // A simplified version. Real version needs full validation.
-    const playerColor = gameState.playerNames['1'] === players[socketId] ? 1 : 2;
-    if (gameState.currentPlayer !== playerColor) return; // Not their turn
-    if (gameState.boardState[r][c] !== 0) return; // Already a stone there
-
-    gameState.boardState[r][c] = playerColor;
-    gameState.moveCounts[playerColor]--;
-    // Switch player
-    gameState.currentPlayer = playerColor === 1 ? 2 : 1;
+function handleMoveServer(gameState, r, c) {
+    if (gameState.boardState[r][c] !== 0) return false;
+    
+    // This is a simplified version. A real implementation would have capture logic.
+    gameState.boardState[r][c] = gameState.currentPlayer;
+    gameState.moveCounts[gameState.currentPlayer]--;
+    gameState.currentPlayer = gameState.currentPlayer === 1 ? 2 : 1;
+    return true; // Move was successful
 }
-
 
 server.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
