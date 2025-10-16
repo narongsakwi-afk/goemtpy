@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <title>เกมหมากล้อม (Go) - ระบบออนไลน์ v2.1</title>
+    <title>เกมหมากล้อม (Go) - ระบบออนไลน์ v2.2</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root{--board-size:15;--cell-size:28px;--color-light-bg:#f9f9f9;--color-dark-bg:#e0e0e0;--color-board:#f7d794;--color-wood-dark:#b8860b;--color-button:#4a90e2;--color-button-hover:#357ABD;--color-black:#000;--color-white:#fff;--font-family:'Kanit',sans-serif;--bg-color:var(--color-dark-bg)}body{font-family:var(--font-family);display:flex;flex-direction:column;align-items:center;padding:10px;margin:0;background-color:var(--bg-color);transition:background-color .4s ease;min-height:100vh;color:#333}body.white-turn{--bg-color:var(--color-light-bg)}body.black-turn{--bg-color:var(--color-dark-bg)}h1,h2,h3{font-weight:600;color:#1e3a5f;margin-bottom:15px}#home-view,#lobby-view,#game-view,#waiting-room-view{display:none;width:100%;max-width:1200px;align-items:center;flex-direction:column;padding:15px}#home-view.active,#lobby-view.active,#game-view.active,#waiting-room-view.active{display:flex}.card{background-color:var(--color-white);border-radius:12px;box-shadow:0 8px 16px rgba(0,0,0,.15);padding:25px;margin-bottom:20px;width:100%;box-sizing:border-box}#home-view input,#create-room-section input{padding:10px;margin:5px 0 15px 10px;border:1px solid #ccc;border-radius:6px;font-size:16px;width:60%}button{padding:12px 25px;font-size:18px;margin:10px 8px;cursor:pointer;border:none;border-radius:8px;font-weight:600;transition:background-color .3s,transform .1s}button:disabled{background-color:#ccc;cursor:not-allowed}.btn-primary{background-color:var(--color-button);color:var(--color-white)}.btn-primary:hover:not(:disabled){background-color:var(--color-button-hover);transform:translateY(-1px)}.btn-secondary{background-color:#e7e7e7;color:#333}.btn-secondary:hover{background-color:#d7d7d7}.btn-join{background-color:#28a745;color:#fff;padding:8px 15px;font-size:16px}.btn-join:hover:not(:disabled){background-color:#218838}#online-players-section{text-align:left}#online-list{list-style-type:none;padding-left:0}#online-list li{padding:5px 0;border-bottom:1px solid #f0f0f0;color:#2e7d32;font-weight:500}#online-list li::before{content:'🟢 '}#room-list{display:flex;flex-direction:column;gap:15px;margin-top:10px}.room-item{display:flex;justify-content:space-between;align-items:center;padding:15px;background-color:#f9f9f9;border-radius:8px;border:1px solid #eee}.player-slots{display:flex;justify-content:space-around;width:100%;margin:20px 0}.player-slot{width:45%;padding:20px;border:1px solid #ddd;border-radius:8px;text-align:center}.status-indicator{display:inline-block;padding:5px 12px;border-radius:15px;font-size:.9em;font-weight:600}.status-indicator.host{background-color:#e2eafc;color:#4a69bd}.status-indicator.waiting{background-color:#f8d7da;color:#721c24}.status-indicator.ready{background-color:#d4edda;color:#155724}.turn-indicator{display:inline-block;margin-right:8px;font-weight:700;color:#f39c12;visibility:hidden}.turn-indicator.active{visibility:visible}#leaderboard table{width:100%;border-collapse:separate;border-spacing:0}#leaderboard th,#leaderboard td{padding:12px 15px;text-align:left}#leaderboard th{background-color:#1e3a5f;color:var(--color-white)}#game-view{flex-direction:row;align-items:flex-start;position:relative}#player-info-container{width:220px;flex-shrink:0;margin-right:20px}.player-info-card{background:#fff;padding:15px;border-radius:8px;margin-bottom:15px;box-shadow:0 2px 4px rgba(0,0,0,.05)}.player-info-card h4{margin:0 0 10px;border-bottom:1px solid #eee;padding-bottom:8px}.player-info-card p{margin:4px 0;font-size:.95em}.player-info-rank{font-weight:700}#game-container{flex-shrink:0;text-align:center}#controls-panel{min-width:250px;text-align:center}#board{display:grid;grid-template-columns:repeat(var(--board-size),1fr);width:calc(var(--board-size) * var(--cell-size));height:calc(var(--board-size) * var(--cell-size));background-color:var(--color-board);border:4px solid var(--color-wood-dark)}.intersection{border-right:1px solid #333;border-bottom:1px solid #333;cursor:pointer;box-sizing:border-box;display:flex;justify-content:center;align-items:center;position:relative}.intersection:nth-child(15n){border-right:none}#board>div:nth-last-child(-n+15){border-bottom:none}.stone{width:80%;height:80%;border-radius:50%;position:absolute;box-shadow:0 2px 4px rgba(0,0,0,.4),inset 0 0 5px rgba(255,255,255,.4)}.black{background:radial-gradient(circle at 30% 30%,#444,var(--color-black))}.white{background:radial-gradient(circle at 30% 30%,#fff,#ddd);border:1px solid #aaa;box-shadow:0 2px 4px rgba(0,0,0,.4),inset 0 0 5px rgba(0,0,0,.2)}
@@ -71,18 +71,22 @@
         <div id="controls-panel">
             <div id="current-status" class="card">
                 <p>🧑 **ตาเดิน:** <span id="current-player-name"></span></p>
-                <p>🏆 **หินที่จับได้:**</p>
-                <p><span id="p1-turn-indicator" class="turn-indicator">➢</span>⚫ <span id="p1-name-display"></span>: <span id="p1-score">0</span></p>
-                <p><span id="p2-turn-indicator" class="turn-indicator">➢</span>⚪ <span id="p2-name-display"></span>: <span id="p2-score">0</span></p>
+                <p>↩️ **ผ่านไปแล้ว:**</p>
+                <p>⚫ <span id="p1-pass-count">0</span>/5 | ⚪ <span id="p2-pass-count">0</span>/5</p>
+                <hr>
+                <p>♟️ **หมากที่เหลือ:**</p>
+                <p>⚫ <span id="p1-moves-left">100</span> | ⚪ <span id="p2-moves-left">100</span></p>
             </div>
             <div id="controls">
+                <button onclick="passMove()">🤝 ผ่าน</button>
+                <button onclick="surrender()" style="background-color: #f44336; color: white;">🏳️ ยอมแพ้</button>
+                <hr>
                 <button onclick="gotoLobby()" class="btn-secondary">🏠 ออกจาก Lobby</button>
             </div>
         </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
-
     <script>
         const socket = io();
         let mainPlayerName = '';
@@ -96,16 +100,12 @@
             document.getElementById(viewId).classList.add('active');
         }
 
-        // --- Step 1: Entering the Game ---
         function enterLobby() {
             const nameInput = document.getElementById('main-player-name').value;
             if (!nameInput.trim()) return alert('กรุณาใส่ชื่อของคุณ');
             mainPlayerName = nameInput.trim();
             document.getElementById('lobby-player-name').textContent = mainPlayerName;
-            
-            // [FIXED] This is the correct way to notify the server you are online.
             socket.emit('player_online', mainPlayerName); 
-            
             gotoLobby();
         }
         
@@ -114,7 +114,6 @@
             socket.emit('get_rooms');
         }
         
-        // --- Step 2: Lobby Interaction ---
         function createRoom() {
             const roomName = document.getElementById('room-name-input').value.trim();
             if (!roomName) return alert('กรุณาตั้งชื่อห้อง');
@@ -125,7 +124,6 @@
             socket.emit('join_room', { roomId, playerName: mainPlayerName });
         }
         
-        // --- Step 3: Waiting Room ---
         function renderWaitingRoom(room) {
             currentRoomId = room.id;
             showView('waiting-room-view');
@@ -157,7 +155,6 @@
             readyBtn.onclick = () => socket.emit('player_ready', currentRoomId);
         }
 
-        // --- Step 4: Game Play ---
         function createBoardGrid() {
             boardElement.innerHTML = "";
             for (let r = 0; r < 15; r++) {
@@ -171,9 +168,8 @@
         }
 
         function updateGameUI(state) {
-            const { boardState, currentPlayer, capturedStones, playerNames } = state;
+            const { boardState, currentPlayer, playerNames, moveCounts, passCounts } = state;
             
-            // Render stones
             let i = 0;
             for(let r=0; r<15; r++) {
                 for(let c=0; c<15; c++) {
@@ -188,20 +184,21 @@
                     i++;
                 }
             }
-
-            // Update info
+            
             document.getElementById('current-player-name').textContent = playerNames[currentPlayer];
-            document.getElementById('p1-name-display').textContent = playerNames['1'];
-            document.getElementById('p2-name-display').textContent = playerNames['2'];
-            document.getElementById('p1-score').textContent = capturedStones['1'];
-            document.getElementById('p2-score').textContent = capturedStones['2'];
-            document.getElementById('p1-turn-indicator').classList.toggle('active', currentPlayer === 1);
-            document.getElementById('p2-turn-indicator').classList.toggle('active', currentPlayer === 2);
-
+            document.getElementById('p1-pass-count').textContent = passCounts['1'];
+            document.getElementById('p2-pass-count').textContent = passCounts['2'];
+            document.getElementById('p1-moves-left').textContent = moveCounts['1'];
+            document.getElementById('p2-moves-left').textContent = moveCounts['2'];
             const myColor = playerNames['1'] === mainPlayerName ? 1 : 2;
             document.getElementById('my-info-name').textContent = `${myColor === 1 ? '⚫' : '⚪'} ${mainPlayerName}`;
         }
         
+        // Functions to send actions to server
+        function passMove() { socket.emit('pass_move', currentRoomId); }
+        function surrender() { if(confirm('คุณแน่ใจว่าจะยอมแพ้?')) socket.emit('surrender', currentRoomId); }
+
+
         // --- Listening to Server Events ---
         socket.on('update_online_players', (players) => {
             const list = document.getElementById('online-list');
@@ -245,7 +242,11 @@
             updateGameUI(gameState);
         });
 
-        // --- Initial Load ---
+        socket.on('game_over', ({ winner, reason }) => {
+            alert(`จบเกมแล้ว!\nผู้ชนะ: ${winner}\nเหตุผล: ${reason}`);
+            gotoLobby();
+        });
+
         showView('home-view');
     </script>
 </body>
