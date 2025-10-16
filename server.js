@@ -5,7 +5,6 @@ const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
-// [FIXED] Removed the extra "new" keyword here
 const io = new Server(server);
 
 const PORT = process.env.PORT || 3000;
@@ -33,7 +32,7 @@ io.on('connection', (socket) => {
     socket.on('create_room', (roomData) => {
         const roomId = `room_${socket.id}`;
         rooms[roomId] = { ...roomData, id: roomId, hostSocket: socket.id };
-        players[socket.id].currentRoom = roomId;
+        if(players[socket.id]) players[socket.id].currentRoom = roomId;
         socket.join(roomId); 
         io.emit('update_room_list', Object.values(rooms));
         socket.emit('joined_room', rooms[roomId]);
@@ -44,7 +43,7 @@ io.on('connection', (socket) => {
         if (room && !room.challenger) {
             room.challenger = playerName;
             room.challengerSocket = socket.id;
-            players[socket.id].currentRoom = roomId;
+            if(players[socket.id]) players[socket.id].currentRoom = roomId;
             socket.join(roomId);
             io.to(roomId).emit('player_joined', room);
             io.emit('update_room_list', Object.values(rooms));
@@ -71,10 +70,9 @@ io.on('connection', (socket) => {
     
     socket.on('make_move', ({ roomId, r, c }) => {
         const room = rooms[roomId];
-        if (!room || !room.gameState) return;
-        
+        // [FIXED] Added safety checks to prevent server crashes
         const player = players[socket.id];
-        if (!player) return;
+        if (!room || !room.gameState || !player) return;
         
         const playerColor = room.gameState.playerNames['1'] === player.name ? 1 : 2;
         if (room.gameState.currentPlayer !== playerColor) return;
@@ -114,9 +112,11 @@ io.on('connection', (socket) => {
 
     socket.on('pass_move', (roomId) => {
         const room = rooms[roomId];
-        if (!room || !room.gameState) return;
+        // [FIXED] Added safety checks to prevent server crashes
+        const player = players[socket.id];
+        if (!room || !room.gameState || !player) return;
 
-        const playerColor = room.gameState.playerNames['1'] === players[socket.id].name ? 1 : 2;
+        const playerColor = room.gameState.playerNames['1'] === player.name ? 1 : 2;
         if (room.gameState.currentPlayer !== playerColor) return;
 
         room.gameState.passCounts[playerColor]++;
@@ -132,8 +132,11 @@ io.on('connection', (socket) => {
 
     socket.on('surrender', (roomId) => {
         const room = rooms[roomId];
-        if (!room || !room.gameState) return;
-        const playerColor = room.gameState.playerNames['1'] === players[socket.id].name ? 1 : 2;
+        // [FIXED] Added safety checks to prevent server crashes
+        const player = players[socket.id];
+        if (!room || !room.gameState || !player) return;
+
+        const playerColor = room.gameState.playerNames['1'] === player.name ? 1 : 2;
         const winnerName = room.gameState.playerNames[playerColor === 1 ? 2 : 1];
         io.to(roomId).emit('game_over', { winner: winnerName, reason: `ฝ่ายตรงข้ามยอมแพ้` });
         delete rooms[roomId];
@@ -153,6 +156,9 @@ io.on('connection', (socket) => {
                     io.to(remainingPlayerSocket).emit('game_over', { winner: winnerName, reason: 'ฝ่ายตรงข้ามออกจากเกม' });
                 }
                 delete rooms[roomId];
+            } else if (roomId && rooms[roomId] && rooms[roomId].hostSocket === socket.id) {
+                // If the host disconnects before the game starts, delete the room
+                delete rooms[roomId];
             }
             delete players[socket.id];
             io.emit('update_online_players', Object.values(players).map(p => p.name));
@@ -161,7 +167,7 @@ io.on('connection', (socket) => {
     });
 });
 
-// --- Server-Side Game Logic ---
+// --- Server-Side Game Logic (The full, correct version) ---
 
 function getNeighbors(r, c) {
     const neighbors = [];
@@ -176,7 +182,7 @@ function getNeighbors(r, c) {
 }
 
 function findGroupAndLiberties(r, c, color, boardState) {
-    if (r < 0 || r >= 15 || c < 0 || c >= 15 || boardState[r][c] !== color) {
+    if (r < 0 || r >= 15 || c < 0 || c >= 15 || !boardState[r] || boardState[r][c] !== color) {
         return { group: [], libertiesCount: 0 };
     }
     const group = [];
@@ -191,11 +197,12 @@ function findGroupAndLiberties(r, c, color, boardState) {
         getNeighbors(current.r, current.c).forEach(n => {
             const key = `${n.r},${n.c}`;
             if (visited[key]) return;
-            visited[key] = true;
+            
             const neighborState = boardState[n.r][n.c];
             if (neighborState === 0) {
                 liberties.add(key);
             } else if (neighborState === color) {
+                visited[key] = true;
                 queue.push(n);
             }
         });
