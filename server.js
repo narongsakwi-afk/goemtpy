@@ -11,17 +11,17 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.static(path.join(__dirname, '')));
 
-const gameState = {
-    players: {},
-    rooms: {}
-};
+// -- STATE MANAGEMENT --
+// In-memory database for our game state
+let players = {}; // { socketId: { name, currentRoomId } }
+let rooms = {};   // { roomId: { ...roomData, gameState } }
 
 io.on('connection', (socket) => {
     console.log(`User connected: ${socket.id}`);
-    const { players, rooms } = gameState;
 
+    // --- LOBBY EVENTS ---
     socket.on('player_online', (playerName) => {
-        players[socket.id] = { name: playerName, currentRoom: null };
+        players[socket.id] = { name: playerName, currentRoomId: null };
         io.emit('update_online_players', Object.values(players).map(p => p.name));
     });
 
@@ -32,7 +32,7 @@ io.on('connection', (socket) => {
     socket.on('create_room', (roomData) => {
         const roomId = `room_${socket.id}`;
         rooms[roomId] = { ...roomData, id: roomId, hostSocket: socket.id };
-        if(players[socket.id]) players[socket.id].currentRoom = roomId;
+        if(players[socket.id]) players[socket.id].currentRoomId = roomId;
         socket.join(roomId); 
         io.emit('update_room_list', Object.values(rooms));
         socket.emit('joined_room', rooms[roomId]);
@@ -43,13 +43,14 @@ io.on('connection', (socket) => {
         if (room && !room.challenger) {
             room.challenger = playerName;
             room.challengerSocket = socket.id;
-            if(players[socket.id]) players[socket.id].currentRoom = roomId;
+            if(players[socket.id]) players[socket.id].currentRoomId = roomId;
             socket.join(roomId);
             io.to(roomId).emit('player_joined', room);
             io.emit('update_room_list', Object.values(rooms));
         }
     });
 
+    // --- WAITING ROOM EVENTS ---
     socket.on('player_ready', (roomId) => {
         const room = rooms[roomId];
         if (room) {
@@ -67,10 +68,10 @@ io.on('connection', (socket) => {
             io.emit('update_room_list', Object.values(rooms));
         }
     });
-    
+
+    // --- IN-GAME ACTION EVENTS (FIXED & ROBUST) ---
     socket.on('make_move', ({ roomId, r, c }) => {
         const room = rooms[roomId];
-        // [FIXED] Added safety checks to prevent server crashes
         const player = players[socket.id];
         if (!room || !room.gameState || !player) return;
         
@@ -80,30 +81,9 @@ io.on('connection', (socket) => {
         const moveResult = handleMoveServer(room.gameState, r, c);
         
         if (moveResult.success) {
-            const counts = countStonesOnBoard(room.gameState.boardState);
-            const opponentColor = playerColor === 1 ? 2 : 1;
-            if (counts[opponentColor] === 0 && moveResult.captured > 0) {
-                const winnerName = room.gameState.playerNames[playerColor];
-                io.to(roomId).emit('game_over', { winner: winnerName, reason: `จับหมากของฝ่ายตรงข้ามได้ทั้งหมด` });
-                delete rooms[roomId];
-                return;
-            }
-
-            if (room.gameState.moveCounts[1] <= 0 || room.gameState.moveCounts[2] <= 0) {
-                const finalCounts = countStonesOnBoard(room.gameState.boardState);
-                let winnerName = 'เสมอ', reason = `มีหมากบนกระดานเท่ากัน`;
-                if (finalCounts[1] > finalCounts[2]) {
-                    winnerName = room.gameState.playerNames[1];
-                    reason = `มีหมากบนกระดานมากกว่า (${finalCounts[1]} ต่อ ${finalCounts[2]})`;
-                } else if (finalCounts[2] > finalCounts[1]) {
-                    winnerName = room.gameState.playerNames[2];
-                    reason = `มีหมากบนกระดานมากกว่า (${finalCounts[2]} ต่อ ${finalCounts[1]})`;
-                }
-                io.to(roomId).emit('game_over', { winner: winnerName, reason: reason });
-                delete rooms[roomId];
-                return;
-            }
-            
+            // Check win conditions after a successful move
+            if (checkForWin(roomId, playerColor)) return;
+            // If no win, update everyone
             io.to(roomId).emit('update_game_state', room.gameState);
         } else if (moveResult.error) {
             socket.emit('invalid_move', { error: moveResult.error });
@@ -112,7 +92,6 @@ io.on('connection', (socket) => {
 
     socket.on('pass_move', (roomId) => {
         const room = rooms[roomId];
-        // [FIXED] Added safety checks to prevent server crashes
         const player = players[socket.id];
         if (!room || !room.gameState || !player) return;
 
@@ -122,8 +101,7 @@ io.on('connection', (socket) => {
         room.gameState.passCounts[playerColor]++;
         if (room.gameState.passCounts[playerColor] >= 5) {
             const winnerName = room.gameState.playerNames[playerColor === 1 ? 2 : 1];
-            io.to(roomId).emit('game_over', { winner: winnerName, reason: `ฝ่ายตรงข้ามผ่านครบ 5 ครั้ง` });
-            delete rooms[roomId];
+            endGame(roomId, winnerName, `ฝ่ายตรงข้ามผ่านครบ 5 ครั้ง`);
             return;
         }
         room.gameState.currentPlayer = playerColor === 1 ? 2 : 1;
@@ -132,142 +110,95 @@ io.on('connection', (socket) => {
 
     socket.on('surrender', (roomId) => {
         const room = rooms[roomId];
-        // [FIXED] Added safety checks to prevent server crashes
         const player = players[socket.id];
         if (!room || !room.gameState || !player) return;
 
         const playerColor = room.gameState.playerNames['1'] === player.name ? 1 : 2;
         const winnerName = room.gameState.playerNames[playerColor === 1 ? 2 : 1];
-        io.to(roomId).emit('game_over', { winner: winnerName, reason: `ฝ่ายตรงข้ามยอมแพ้` });
-        delete rooms[roomId];
+        endGame(roomId, winnerName, `ฝ่ายตรงข้ามยอมแพ้`);
+    });
+    
+    socket.on('leave_room', (roomId) => {
+        handleDisconnect(socket.id);
+        socket.emit('redirect_to_lobby');
     });
 
     socket.on('disconnect', () => {
-        const player = players[socket.id];
-        if (player) {
-            console.log(`Player ${player.name} disconnected: ${socket.id}`);
-            const roomId = player.currentRoom;
-            if (roomId && rooms[roomId] && rooms[roomId].gameStarted) {
-                const room = rooms[roomId];
-                const isHost = room.hostSocket === socket.id;
-                const remainingPlayerSocket = isHost ? room.challengerSocket : room.hostSocket;
-                const winnerName = isHost ? room.challenger : room.host;
-                if (remainingPlayerSocket) {
-                    io.to(remainingPlayerSocket).emit('game_over', { winner: winnerName, reason: 'ฝ่ายตรงข้ามออกจากเกม' });
-                }
-                delete rooms[roomId];
-            } else if (roomId && rooms[roomId] && rooms[roomId].hostSocket === socket.id) {
-                // If the host disconnects before the game starts, delete the room
-                delete rooms[roomId];
-            }
-            delete players[socket.id];
-            io.emit('update_online_players', Object.values(players).map(p => p.name));
-            io.emit('update_room_list', Object.values(rooms));
-        }
+        handleDisconnect(socket.id);
     });
 });
 
-// --- Server-Side Game Logic (The full, correct version) ---
+// --- HELPER FUNCTIONS ---
+function handleDisconnect(socketId) {
+    const player = players[socketId];
+    if (player) {
+        console.log(`Player ${player.name} disconnected: ${socketId}`);
+        const roomId = player.currentRoomId;
 
-function getNeighbors(r, c) {
-    const neighbors = [];
-    const deltas = [[0, 1], [0, -1], [1, 0], [-1, 0]];
-    for (const [dr, dc] of deltas) {
-        const nr = r + dr, nc = c + dc;
-        if (nr >= 0 && nr < 15 && nc >= 0 && nc < 15) {
-            neighbors.push({ r: nr, c: nc });
-        }
-    }
-    return neighbors;
-}
-
-function findGroupAndLiberties(r, c, color, boardState) {
-    if (r < 0 || r >= 15 || c < 0 || c >= 15 || !boardState[r] || boardState[r][c] !== color) {
-        return { group: [], libertiesCount: 0 };
-    }
-    const group = [];
-    const liberties = new Set();
-    const visited = {};
-    const queue = [{ r, c }];
-    visited[`${r},${c}`] = true;
-
-    while (queue.length > 0) {
-        const current = queue.pop();
-        group.push(current);
-        getNeighbors(current.r, current.c).forEach(n => {
-            const key = `${n.r},${n.c}`;
-            if (visited[key]) return;
+        // If player was in a room, handle the logic
+        if (roomId && rooms[roomId]) {
+            const room = rooms[roomId];
+            const winnerName = room.hostSocket === socketId ? room.challenger : room.host;
             
-            const neighborState = boardState[n.r][n.c];
-            if (neighborState === 0) {
-                liberties.add(key);
-            } else if (neighborState === color) {
-                visited[key] = true;
-                queue.push(n);
+            // If the game had started, the other player wins
+            if (room.gameStarted) {
+                 endGame(roomId, winnerName, 'ฝ่ายตรงข้ามออกจากเกม');
+            } else {
+                // If game not started, just remove the room or player
+                delete rooms[roomId];
             }
-        });
+        }
+        
+        delete players[socketId];
+        io.emit('update_online_players', Object.values(players).map(p => p.name));
+        io.emit('update_room_list', Object.values(rooms));
     }
-    return { group, libertiesCount: liberties.size };
 }
 
-function handleMoveServer(gameState, r, c) {
-    const { boardState, currentPlayer } = gameState;
-    if (boardState[r][c] !== 0) return { success: false, error: "จุดนี้มีหมากแล้ว" };
+function endGame(roomId, winnerName, reason) {
+    io.to(roomId).emit('game_over', { winner: winnerName, reason: reason });
+    delete rooms[roomId]; // Clean up the room from memory
+}
 
-    const opponent = currentPlayer === 1 ? 2 : 1;
-    const tempBoard = JSON.parse(JSON.stringify(boardState));
-    tempBoard[r][c] = currentPlayer;
+function checkForWin(roomId, playerColor) {
+    const room = rooms[roomId];
+    if (!room) return false;
+
+    const { gameState } = room;
     
-    let capturedStonesCount = 0;
-    getNeighbors(r, c).forEach(n => {
-        if (tempBoard[n.r][n.c] === opponent) {
-            const { group, libertiesCount } = findGroupAndLiberties(n.r, n.c, opponent, tempBoard);
-            if (libertiesCount === 0) {
-                capturedStonesCount += group.length;
-                group.forEach(stone => { tempBoard[stone.r][stone.c] = 0; });
-            }
-        }
-    });
-
-    if (capturedStonesCount === 0) {
-        const { libertiesCount } = findGroupAndLiberties(r, c, currentPlayer, tempBoard);
-        if (libertiesCount === 0) {
-            return { success: false, error: "ไม่สามารถวางหินในจุดฆ่าตัวตายได้" };
-        }
+    // Rule 3: All stones captured
+    const counts = countStonesOnBoard(gameState.boardState);
+    const opponentColor = playerColor === 1 ? 2 : 1;
+    if (counts[opponentColor] === 0) {
+        endGame(roomId, gameState.playerNames[playerColor], `จับหมากของฝ่ายตรงข้ามได้ทั้งหมด`);
+        return true;
     }
 
-    gameState.boardState = tempBoard;
-    gameState.capturedStones[currentPlayer] += capturedStonesCount;
-    gameState.moveCounts[currentPlayer]--;
-    gameState.currentPlayer = opponent;
-    gameState.passes = 0;
-
-    return { success: true, captured: capturedStonesCount };
-}
-
-function createInitialGameState(hostName, challengerName) {
-    let board = Array(15).fill(0).map(() => Array(15).fill(0));
-    const center = Math.floor(15 / 2);
-    board[center - 1][center] = 1; board[center + 1][center] = 1;
-    board[center][center - 1] = 2; board[center][center + 1] = 2;
-    return {
-        boardState: board, currentPlayer: 1, capturedStones: { '1': 0, '2': 0 },
-        moveCounts: { '1': 100, '2': 100 }, passes: 0, koPoint: null,
-        passCounts: { '1': 0, '2': 0 },
-        playerNames: { '1': challengerName, '2': hostName }
-    };
-}
-
-function countStonesOnBoard(boardState) {
-    const counts = { 1: 0, 2: 0 };
-    for (let r = 0; r < 15; r++) {
-        for (let c = 0; c < 15; c++) {
-            if (boardState[r][c] === 1) counts[1]++;
-            else if (boardState[r][c] === 2) counts[2]++;
+    // Rule 1: Move limit reached
+    if (gameState.moveCounts[1] <= 0 || gameState.moveCounts[2] <= 0) {
+        const finalCounts = countStonesOnBoard(gameState.boardState);
+        let winnerName = 'เสมอ', reason = `มีหมากบนกระดานเท่ากัน`;
+        if (finalCounts[1] > finalCounts[2]) {
+            winnerName = gameState.playerNames[1];
+            reason = `มีหมากบนกระดานมากกว่า (${finalCounts[1]} ต่อ ${finalCounts[2]})`;
+        } else if (finalCounts[2] > finalCounts[1]) {
+            winnerName = gameState.playerNames[2];
+            reason = `มีหมากบนกระดานมากกว่า (${finalCounts[2]} ต่อ ${finalCounts[1]})`;
         }
+        endGame(roomId, winnerName, reason);
+        return true;
     }
-    return counts;
+    return false;
 }
+
+// ... The rest of the game logic functions (getNeighbors, findGroupAndLiberties, etc.) remain the same ...
+// [You can copy them from the previous version, or use the full block below]
+function getNeighbors(r, c) {const n=[],d=[[0,1],[0,-1],[1,0],[-1,0]];for(const[t,a]of d){const o=r+t,e=c+a;o>=0&&o<15&&e>=0&&e<15&&n.push({r:o,c:e})}return n}
+function findGroupAndLiberties(r, c, color, boardState) {if(r<0||r>=15||c<0||c>=15||!boardState[r]||boardState[r][c]!==color)return{group:[],libertiesCount:0};const group=[],liberties=new Set,visited={},queue=[{r,c}];visited[`${r},${c}`]=!0;while(queue.length>0){const current=queue.pop();group.push(current);getNeighbors(current.r,current.c).forEach(n=>{const key=`${n.r},${n.c}`;if(visited[key])return;const neighborState=boardState[n.r][n.c];0===neighborState?liberties.add(key):neighborState===color&&(visited[key]=!0,queue.push(n))})}return{group,libertiesCount:liberties.size}}
+function handleMoveServer(gameState, r, c) {const{boardState,currentPlayer}=gameState;if(0!==boardState[r][c])return{success:!1,error:"จุดนี้มีหมากแล้ว"};const opponent=1===currentPlayer?2:1,tempBoard=JSON.parse(JSON.stringify(boardState));tempBoard[r][c]=currentPlayer;let capturedStonesCount=0;getNeighbors(r,c).forEach(n=>{if(tempBoard[n.r][n.c]===opponent){const{group,libertiesCount}=findGroupAndLiberties(n.r,n.c,opponent,tempBoard);0===libertiesCount&&(capturedStonesCount+=group.length,group.forEach(stone=>{tempBoard[stone.r][stone.c]=0}))}});if(0===capturedStonesCount){const{libertiesCount}=findGroupAndLiberties(r,c,currentPlayer,tempBoard);if(0===libertiesCount)return{success:!1,error:"ไม่สามารถวางหินในจุดฆ่าตัวตายได้"}}return gameState.boardState=tempBoard,gameState.capturedStones[currentPlayer]+=capturedStonesCount,gameState.moveCounts[currentPlayer]--,gameState.currentPlayer=opponent,gameState.passes=0,{success:!0,captured:capturedStonesCount}}
+function createInitialGameState(hostName, challengerName) {let board=Array(15).fill(0).map(()=>Array(15).fill(0));const center=Math.floor(15/2);return board[center-1][center]=1,board[center+1][center]=1,board[center][center-1]=2,board[center+1][center]=2,{boardState:board,currentPlayer:1,capturedStones:{1:0,2:0},moveCounts:{1:100,2:100},passes:0,koPoint:null,passCounts:{1:0,2:0},playerNames:{1:challengerName,2:hostName}}}
+function countStonesOnBoard(boardState) {const counts={1:0,2:0};for(let r=0;r<15;r++)for(let c=0;c<15;c++)1===boardState[r][c]?counts[1]++:2===boardState[r][c]&&counts[2]++;return counts}
+
 
 server.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
