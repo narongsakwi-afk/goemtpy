@@ -89,11 +89,13 @@
         const views = ['home-view', 'lobby-view', 'game-view', 'waiting-room-view'];
         const boardElement = document.getElementById('board');
 
+        // --- Core UI Functions ---
         function showView(viewId) {
             views.forEach(id => document.getElementById(id).classList.remove('active'));
             document.getElementById(viewId).classList.add('active');
         }
 
+        // --- Client Actions (Emitting to Server) ---
         function enterLobby() {
             const nameInput = document.getElementById('main-player-name').value;
             if (!nameInput.trim()) return alert('กรุณาใส่ชื่อของคุณ');
@@ -124,6 +126,10 @@
             gotoLobby();
         }
         
+        function passMove() { socket.emit('pass_move', currentRoomId); }
+        function surrender() { if(confirm('คุณแน่ใจว่าจะยอมแพ้?')) socket.emit('surrender', currentRoomId); }
+
+        // --- Rendering Functions (Updating UI based on Server Data) ---
         function renderWaitingRoom(room) {
             currentRoomId = room.id;
             showView('waiting-room-view');
@@ -187,9 +193,7 @@
             document.getElementById('my-info-name').textContent = `${myColor === 1 ? '⚫' : '⚪'} ${mainPlayerName}`;
         }
         
-        function passMove() { socket.emit('pass_move', currentRoomId); }
-        function surrender() { if(confirm('คุณแน่ใจว่าจะยอมแพ้?')) socket.emit('surrender', currentRoomId); }
-
+        // --- Listening to Server Events ---
         socket.on('update_online_players', (players) => {
             const list = document.getElementById('online-list');
             const count = document.getElementById('online-count');
