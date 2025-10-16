@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <title>เกมหมากล้อม (Go) - ระบบออนไลน์ v2.6</title>
+    <title>เกมหมากล้อม (Go) - ระบบออนไลน์ v2.7 (Stable)</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root{--board-size:15;--cell-size:28px;--color-light-bg:#f9f9f9;--color-dark-bg:#e0e0e0;--color-board:#f7d794;--color-wood-dark:#b8860b;--color-button:#4a90e2;--color-button-hover:#357ABD;--color-black:#000;--color-white:#fff;--font-family:'Kanit',sans-serif;--bg-color:var(--color-dark-bg)}body{font-family:var(--font-family);display:flex;flex-direction:column;align-items:center;padding:10px;margin:0;background-color:var(--bg-color);transition:background-color .4s ease;min-height:100vh;color:#333}h1,h2,h3{font-weight:600;color:#1e3a5f;margin-bottom:15px}#home-view,#lobby-view,#game-view,#waiting-room-view{display:none;width:100%;max-width:1200px;align-items:center;flex-direction:column;padding:15px}#home-view.active,#lobby-view.active,#game-view.active,#waiting-room-view.active{display:flex}.card{background-color:var(--color-white);border-radius:12px;box-shadow:0 8px 16px rgba(0,0,0,.15);padding:25px;margin-bottom:20px;width:100%;box-sizing:border-box}#home-view input,#create-room-section input{padding:10px;margin:5px 0 15px 10px;border:1px solid #ccc;border-radius:6px;font-size:16px;width:60%}button{padding:12px 25px;font-size:18px;margin:10px 8px;cursor:pointer;border:none;border-radius:8px;font-weight:600;transition:background-color .3s,transform .1s}button:disabled{background-color:#ccc;cursor:not-allowed}#online-players-section{text-align:left}#online-list{list-style-type:none;padding-left:0}#online-list li{padding:5px 0;border-bottom:1px solid #f0f0f0;color:#2e7d32;font-weight:500}#online-list li::before{content:'🟢 '}#room-list{display:flex;flex-direction:column;gap:15px;margin-top:10px}.room-item{display:flex;justify-content:space-between;align-items:center;padding:15px;background-color:#f9f9f9;border-radius:8px;border:1px solid #eee}.player-slots{display:flex;justify-content:space-around;width:100%;margin:20px 0}.player-slot{width:45%;padding:20px;border:1px solid #ddd;border-radius:8px;text-align:center}.status-indicator{display:inline-block;padding:5px 12px;border-radius:15px;font-size:.9em;font-weight:600;background-color:#f8d7da;color:#721c24}.status-indicator.ready{background-color:#d4edda;color:#155724}#game-view{flex-direction:row;align-items:flex-start;position:relative}#player-info-container{width:220px;flex-shrink:0;margin-right:20px}.player-info-card{background:#fff;padding:15px;border-radius:8px;margin-bottom:15px;box-shadow:0 2px 4px rgba(0,0,0,.05)}#game-container{flex-shrink:0;text-align:center}#controls-panel{min-width:250px;text-align:center}#board{display:grid;grid-template-columns:repeat(var(--board-size),1fr);width:calc(var(--board-size) * var(--cell-size));height:calc(var(--board-size) * var(--cell-size));background-color:var(--color-board);border:4px solid var(--color-wood-dark)}.intersection{border-right:1px solid #333;border-bottom:1px solid #333;cursor:pointer;box-sizing:border-box;display:flex;justify-content:center;align-items:center;position:relative}.stone{width:80%;height:80%;border-radius:50%;position:absolute;box-shadow:0 2px 4px rgba(0,0,0,.4),inset 0 0 5px rgba(255,255,255,.4)}
@@ -89,11 +89,13 @@
         const views = ['home-view', 'lobby-view', 'game-view', 'waiting-room-view'];
         const boardElement = document.getElementById('board');
 
+        // --- Core UI Functions ---
         function showView(viewId) {
             views.forEach(id => document.getElementById(id).classList.remove('active'));
             document.getElementById(viewId).classList.add('active');
         }
 
+        // --- Client Actions (Emitting to Server) ---
         function enterLobby() {
             const nameInput = document.getElementById('main-player-name').value;
             if (!nameInput.trim()) return alert('กรุณาใส่ชื่อของคุณ');
@@ -120,10 +122,16 @@
         }
 
         function leaveRoom() {
-            socket.emit('leave_room');
+            if (currentRoomId) {
+                socket.emit('leave_room');
+            }
             gotoLobby();
         }
         
+        function passMove() { socket.emit('pass_move', currentRoomId); }
+        function surrender() { if(confirm('คุณแน่ใจว่าจะยอมแพ้?')) socket.emit('surrender', currentRoomId); }
+
+        // --- Rendering Functions (Updating UI based on Server Data) ---
         function renderWaitingRoom(room) {
             currentRoomId = room.id;
             showView('waiting-room-view');
@@ -187,9 +195,7 @@
             document.getElementById('my-info-name').textContent = `${myColor === 1 ? '⚫' : '⚪'} ${mainPlayerName}`;
         }
         
-        function passMove() { socket.emit('pass_move', currentRoomId); }
-        function surrender() { if(confirm('คุณแน่ใจว่าจะยอมแพ้?')) socket.emit('surrender', currentRoomId); }
-
+        // --- Listening to Server Events ---
         socket.on('update_online_players', (players) => {
             const list = document.getElementById('online-list');
             const count = document.getElementById('online-count');
