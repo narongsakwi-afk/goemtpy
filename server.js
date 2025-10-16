@@ -5,7 +5,8 @@ const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
-const io = new new Server(server);
+// [FIXED] Removed the extra "new" keyword here
+const io = new Server(server);
 
 const PORT = process.env.PORT || 3000;
 
@@ -68,7 +69,6 @@ io.on('connection', (socket) => {
         }
     });
     
-    // [FIXED] Re-implemented the full game logic here
     socket.on('make_move', ({ roomId, r, c }) => {
         const room = rooms[roomId];
         if (!room || !room.gameState) return;
@@ -82,7 +82,6 @@ io.on('connection', (socket) => {
         const moveResult = handleMoveServer(room.gameState, r, c);
         
         if (moveResult.success) {
-            // Check win conditions after a successful move
             const counts = countStonesOnBoard(room.gameState.boardState);
             const opponentColor = playerColor === 1 ? 2 : 1;
             if (counts[opponentColor] === 0 && moveResult.captured > 0) {
@@ -109,7 +108,6 @@ io.on('connection', (socket) => {
             
             io.to(roomId).emit('update_game_state', room.gameState);
         } else if (moveResult.error) {
-            // Optionally, send an error message back to the player
             socket.emit('invalid_move', { error: moveResult.error });
         }
     });
@@ -163,7 +161,7 @@ io.on('connection', (socket) => {
     });
 });
 
-// --- Server-Side Game Logic (Restored to full functionality) ---
+// --- Server-Side Game Logic ---
 
 function getNeighbors(r, c) {
     const neighbors = [];
@@ -206,7 +204,7 @@ function findGroupAndLiberties(r, c, color, boardState) {
 }
 
 function handleMoveServer(gameState, r, c) {
-    const { boardState, currentPlayer, playerNames, moveCounts } = gameState;
+    const { boardState, currentPlayer } = gameState;
     if (boardState[r][c] !== 0) return { success: false, error: "จุดนี้มีหมากแล้ว" };
 
     const opponent = currentPlayer === 1 ? 2 : 1;
@@ -231,12 +229,11 @@ function handleMoveServer(gameState, r, c) {
         }
     }
 
-    // Move is valid, update the real game state
     gameState.boardState = tempBoard;
     gameState.capturedStones[currentPlayer] += capturedStonesCount;
     gameState.moveCounts[currentPlayer]--;
     gameState.currentPlayer = opponent;
-    gameState.passes = 0; // Reset pass count on a valid move
+    gameState.passes = 0;
 
     return { success: true, captured: capturedStonesCount };
 }
